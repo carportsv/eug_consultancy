@@ -1,0 +1,309 @@
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'firebase_options.dart';
+import 'user_service.dart';
+import 'routing_screen.dart';
+
+// Importar js_interop solo en web usando importación condicional
+import 'dart:js_interop' if (dart.library.io) 'dart:js_interop_stub.dart' as js_interop;
+
+// Función top-level para JS interop (necesaria para usar @JS)
+@js_interop.JS('firebaseAuthSignInWithGoogle')
+external js_interop.JSPromise<js_interop.JSObject> _firebaseAuthSignInWithGoogleJS(
+  js_interop.JSObject config,
+);
+
+// This screen handles the UI for the login and the Firebase Google Sign-In logic.
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  bool _isLoading = false;
+  final UserService _userService = UserService();
+  StreamSubscription<User?>? _authSubscription;
+
+  Future<Map<String, dynamic>> _firebaseAuthSignInWithGoogleWeb(Map<String, String> config) async {
+    if (!kIsWeb) {
+      throw UnsupportedError('Este método solo está disponible en web');
+    }
+
+    // Convertir el Map a JSObject
+    final jsConfig = config.jsify() as js_interop.JSObject;
+
+    // Llamar a la función JavaScript
+    final jsResult = await _firebaseAuthSignInWithGoogleJS(jsConfig).toDart;
+
+    // Extraer los datos del resultado usando dartify
+    final resultMap = jsResult.dartify() as Map?;
+    final credentialData = resultMap?['credential'] as Map?;
+    final idToken = credentialData?['idToken'] as String?;
+    final accessToken = credentialData?['accessToken'] as String?;
+
+    if (idToken == null || accessToken == null) {
+      throw Exception('No se pudieron obtener los tokens de autenticación');
+    }
+
+    return {'idToken': idToken, 'accessToken': accessToken};
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Escuchar cambios de autenticación para navegar automáticamente
+    // Esto es especialmente importante después de logout/login
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user != null && mounted && !_isLoading) {
+        // Si hay un usuario y no estamos cargando, navegar automáticamente
+        if (kDebugMode) {
+          debugPrint(
+            '[LoginScreen] ✅ Usuario detectado en stream (${user.uid}), navegando a RoutingScreen',
+          );
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const RoutingScreen()),
+              (route) => false,
+            );
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _signInWithGoogle() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      debugPrint('[LoginScreen] Iniciando Google Sign-In...');
+
+      // Intentar ambas variables por compatibilidad
+      final webClientId =
+          dotenv.env['EXPO_PUBLIC_GOOGLE_CLIENT_ID'] ??
+          dotenv.env['EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID'];
+      debugPrint('[LoginScreen] webClientId: ${webClientId != null ? "✅ configurado" : "❌ null"}');
+
+      UserCredential userCredential;
+
+      if (kIsWeb) {
+        // En web, usar Firebase Auth directamente con JavaScript interop
+        debugPrint('[LoginScreen] Usando Firebase Auth directamente para web...');
+        try {
+          // Obtener configuración de Firebase
+          final firebaseOptions = await DefaultFirebaseOptions.currentPlatform;
+
+          // Crear objeto de configuración para JavaScript
+          // Nota: FirebaseOptions valida que estos campos no sean null en tiempo de ejecución
+          final firebaseConfig = <String, String>{
+            'apiKey': firebaseOptions.apiKey,
+            'authDomain': firebaseOptions.authDomain ?? '',
+            'projectId': firebaseOptions.projectId,
+            if (firebaseOptions.storageBucket != null)
+              'storageBucket': firebaseOptions.storageBucket!,
+            'messagingSenderId': firebaseOptions.messagingSenderId,
+            'appId': firebaseOptions.appId,
+          };
+
+          // Llamar a la función JavaScript usando js_interop
+          final tokens = await _firebaseAuthSignInWithGoogleWeb(firebaseConfig);
+          final idToken = tokens['idToken'] as String;
+          final accessToken = tokens['accessToken'] as String;
+
+          debugPrint('[LoginScreen] ✅ Tokens obtenidos de Firebase Auth JS');
+
+          // Crear credencial y autenticar con Firebase
+          final credential = GoogleAuthProvider.credential(
+            accessToken: accessToken,
+            idToken: idToken,
+          );
+
+          debugPrint('[LoginScreen] Autenticando con Firebase...');
+          userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+          debugPrint('[LoginScreen] ✅ Autenticado con Firebase');
+        } catch (e) {
+          debugPrint('[LoginScreen] ⚠️ Error con Firebase Auth JS: $e');
+          // Fallback a google_sign_in si Firebase Auth JS falla
+          debugPrint('[LoginScreen] Intentando con google_sign_in como fallback...');
+          final GoogleSignIn googleSignIn = GoogleSignIn(
+            clientId: webClientId,
+            scopes: ['email', 'profile'],
+          );
+
+          final googleUser = await googleSignIn.signIn();
+          if (googleUser == null) {
+            debugPrint('[LoginScreen] Usuario canceló el inicio de sesión');
+            if (mounted) setState(() => _isLoading = false);
+            return;
+          }
+
+          final googleAuth = await googleUser.authentication;
+          if (googleAuth.accessToken == null || googleAuth.idToken == null) {
+            throw Exception(
+              'Error: No se pudo obtener el token de autenticación de Google.\n\n'
+              'Por favor, permite popups en tu navegador para este sitio.',
+            );
+          }
+
+          final credential = GoogleAuthProvider.credential(
+            accessToken: googleAuth.accessToken,
+            idToken: googleAuth.idToken,
+          );
+          userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+        }
+      } else {
+        // Para móvil, usar google_sign_in
+        final GoogleSignIn googleSignIn = GoogleSignIn(
+          clientId: null,
+          scopes: ['email', 'profile'],
+        );
+
+        debugPrint('[LoginScreen] Llamando a signIn() para móvil...');
+        final googleUser = await googleSignIn.signIn();
+        if (googleUser == null) {
+          debugPrint('[LoginScreen] Usuario canceló el inicio de sesión');
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        }
+
+        debugPrint('[LoginScreen] ✅ Usuario seleccionado: ${googleUser.email}');
+        debugPrint('[LoginScreen] Obteniendo tokens de autenticación...');
+        final googleAuth = await googleUser.authentication;
+
+        if (googleAuth.accessToken == null || googleAuth.idToken == null) {
+          throw Exception('No se pudieron obtener los tokens de autenticación');
+        }
+
+        debugPrint('[LoginScreen] ✅ Tokens obtenidos, creando credencial...');
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        debugPrint('[LoginScreen] Autenticando con Firebase...');
+        userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+        debugPrint('[LoginScreen] ✅ Autenticado con Firebase');
+      }
+
+      final user = userCredential.user;
+      if (user == null) {
+        debugPrint('[LoginScreen] ⚠️ Usuario es null después de signInWithCredential');
+        throw Exception('No se pudo obtener el usuario después de la autenticación');
+      }
+
+      // Sincronizar con Supabase
+      debugPrint('[LoginScreen] Sincronizando con Supabase...');
+      await _userService.syncUserWithSupabase();
+      debugPrint('[LoginScreen] ✅ Sincronización completada');
+
+      // Navegar directamente después del login exitoso (como se hacía antes)
+      if (mounted) {
+        debugPrint('[LoginScreen] ✅ Login exitoso, navegando a RoutingScreen...');
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const RoutingScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[LoginScreen] ❌ ERROR: $e');
+      debugPrint('[LoginScreen] Stack trace: $stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al iniciar sesión: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Card(
+              elevation: 8.0,
+              shadowColor: Colors.black.withValues(alpha: 0.3),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'cuzcatlansv.ride',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Inicia sesión para continuar',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 40),
+                    _isLoading
+                        ? const CircularProgressIndicator()
+                        : ElevatedButton.icon(
+                            onPressed: _signInWithGoogle,
+                            icon: Image.asset('assets/images/google_sig.png', height: 24.0),
+                            label: const Text(
+                              'Iniciar sesión con Google',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF3B82F6),
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                              elevation: 5,
+                              shadowColor: Colors.blue.withValues(alpha: 0.4),
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

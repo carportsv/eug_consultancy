@@ -1,0 +1,48 @@
+name: fzkt_openstreet
+description: "ride app"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase & Google
+  firebase_core: ^4.2.1
+  firebase_auth: ^6.1.2
+  cloud_firestore: ^6.1.0
+  google_sign_in: ^6.2.1
+
+  # State Management & Services
+  provider: ^6.1.2
+  flutter_dotenv: ^6.0.0
+  intl: ^0.20.2
+  
+  # Supabase
+  supabase_flutter: ^2.0.0
+
+  # Other dependencies
+  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.2.1
+  http: ^1.2.2
+  
+  # Maps
+  flutter_map: ^7.0.0
+  latlong2: ^0.9.1
+  geolocator: ^13.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - .env
