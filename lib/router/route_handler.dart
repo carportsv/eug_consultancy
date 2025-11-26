@@ -33,12 +33,6 @@ class RouteHandler extends StatelessWidget {
           debugPrint('[RouteHandler] Full URI: $fullUri');
         }
 
-        // Verificar si la ruta o el fragmento contiene /welcome
-        // El fragmento puede venir como "/welcome" o "welcome" dependiendo de cómo se acceda
-        // También verificar en la URL completa por si el hash no se captura en el fragmento
-        final normalizedFragment = fragment.startsWith('/') ? fragment : '/$fragment';
-        final hasWelcomeInUrl = fullUri.contains('/welcome') || fullUri.contains('#/welcome');
-
         // Normalizar el path removiendo el base-href si está presente
         String normalizedPath = path;
         if (path.startsWith('/fzkt_openstreet')) {
@@ -48,12 +42,31 @@ class RouteHandler extends StatelessWidget {
           }
         }
 
+        // Normalizar el fragment - puede venir como "/welcome" o "welcome"
+        String normalizedFragment = fragment;
+        if (fragment.isNotEmpty) {
+          if (!fragment.startsWith('/')) {
+            normalizedFragment = '/$fragment';
+          }
+        }
+
+        // Verificar si la ruta o el fragmento contiene /welcome
+        final hasWelcomeInUrl = fullUri.contains('/welcome') || fullUri.contains('#/welcome');
         final isWelcomePath = normalizedPath.endsWith('/welcome') || normalizedPath == '/welcome';
         final isWelcomeFragment =
-            normalizedFragment.contains('/welcome') ||
             normalizedFragment == '/welcome' ||
             normalizedFragment == '/welcome/' ||
-            fragment == 'welcome';
+            normalizedFragment.contains('/welcome') ||
+            fragment == 'welcome' ||
+            fragment == '/welcome';
+
+        if (kDebugMode) {
+          debugPrint('[RouteHandler] Normalized path: $normalizedPath');
+          debugPrint('[RouteHandler] Normalized fragment: $normalizedFragment');
+          debugPrint('[RouteHandler] isWelcomePath: $isWelcomePath');
+          debugPrint('[RouteHandler] isWelcomeFragment: $isWelcomeFragment');
+          debugPrint('[RouteHandler] hasWelcomeInUrl: $hasWelcomeInUrl');
+        }
 
         if (isWelcomePath || isWelcomeFragment || hasWelcomeInUrl) {
           if (kDebugMode) {
