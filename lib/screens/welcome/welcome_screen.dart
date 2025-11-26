@@ -9,8 +9,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import '../../auth/login_screen.dart';
-import '../../auth/user_service.dart';
-import '../admin/admin_home_screen.dart';
+import '../../auth/supabase_service.dart';
 
 // Constants
 const _kPrimaryColor = Color(0xFF1D4ED8);
@@ -42,7 +41,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   // Form State
   String _selectedPriority = 'normal';
-  final bool _isLoading = false;
+  bool _isLoading = false;
 
   // Map State
   final MapController _mapController = MapController();
@@ -59,40 +58,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   bool _isLoadingLocation = false;
   Timer? _debounceTimer;
 
-  final UserService _userService = UserService();
+  final SupabaseService _supabaseService = SupabaseService();
 
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
-    // Escuchar cambios de autenticación
-    FirebaseAuth.instance.authStateChanges().listen((User? user) async {
-      if (user != null && mounted) {
-        // Si el usuario se autentica, verificar rol y navegar
-        try {
-          final role = await _userService
-              .getUserRole(user.uid)
-              .timeout(const Duration(seconds: 5), onTimeout: () => 'user');
-
-          if (mounted) {
-            // Solo admin puede acceder a pantallas protegidas
-            if (role == 'admin') {
-              Navigator.of(
-                context,
-              ).pushReplacement(MaterialPageRoute(builder: (context) => const AdminHomeScreen()));
-            } else {
-              // Usuario regular o driver: quedarse en /welcome o redirigir
-              // No hacer nada, quedarse en WelcomeScreen
-            }
-          }
-        } catch (e) {
-          // Error al obtener rol, quedarse en WelcomeScreen
-          if (kDebugMode) {
-            debugPrint('Error obteniendo rol en WelcomeScreen: $e');
-          }
-        }
-      }
-    });
+    // WelcomeScreen es pública y accesible para todos, incluso usuarios autenticados
+    // No redirigir automáticamente - el usuario puede navegar manualmente si lo desea
   }
 
   Future<void> _getCurrentLocation() async {
@@ -699,41 +672,125 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       return;
     }
 
-    // Si está autenticado, verificar rol y navegar
-    if (mounted) {
-      try {
-        final userService = UserService();
-        final role = await userService
-            .getUserRole(firebaseUser.uid)
-            .timeout(const Duration(seconds: 5), onTimeout: () => 'user');
+    setState(() => _isLoading = true);
 
-        // Solo admin puede acceder a pantallas protegidas
-        if (mounted) {
-          if (role == 'admin') {
-            Navigator.of(
-              context,
-            ).pushReplacement(MaterialPageRoute(builder: (context) => const AdminHomeScreen()));
+    try {
+      // Get Supabase user ID from Firebase UID
+      final supabaseClient = _supabaseService.client;
+      final userResponse = await supabaseClient
+          .from('users')
+          .select('id')
+          .eq('firebase_uid', firebaseUser.uid)
+          .maybeSingle();
+
+      final userId = userResponse?['id'] as String?;
+      if (userId == null) {
+        throw Exception(
+          'Usuario no encontrado en Supabase. Por favor, sincronice su cuenta primero.',
+        );
+      }
+
+      // Parse form data
+      final originAddress = _originController.text.trim();
+      final destinationAddress = _destinationController.text.trim();
+      final price = double.tryParse(_priceController.text.trim());
+      final distance = double.tryParse(_distanceController.text.trim());
+      final clientName = _clientNameController.text.trim();
+      final notes = _notesController.text.trim();
+      final scheduledDate = _dateController.text.trim();
+      final scheduledTime = _timeController.text.trim();
+
+      // Validate required fields
+      if (originAddress.isEmpty ||
+          destinationAddress.isEmpty ||
+          price == null ||
+          clientName.isEmpty) {
+        throw Exception('Por favor complete todos los campos requeridos');
+      }
+
+      // Prepare ride data
+      final rideData = <String, dynamic>{
+        'user_id': userId,
+        'origin': {
+          'address': originAddress,
+          'coordinates': {
+            'latitude': _originCoords?.latitude ?? 0.0,
+            'longitude': _originCoords?.longitude ?? 0.0,
+          },
+        },
+        'destination': {
+          'address': destinationAddress,
+          'coordinates': {
+            'latitude': _destinationCoords?.latitude ?? 0.0,
+            'longitude': _destinationCoords?.longitude ?? 0.0,
+          },
+        },
+        'status': 'requested',
+        'price': price,
+        'client_name': clientName,
+        'priority': _selectedPriority.toLowerCase(),
+        'created_at': DateTime.now().toIso8601String(),
+      };
+
+      // Add optional fields
+      if (distance != null && distance > 0) {
+        rideData['distance'] = distance * 1000; // Convert km to meters
+      }
+
+      if (notes.isNotEmpty) {
+        rideData['additional_notes'] = notes;
+      }
+
+      // Handle scheduled rides
+      if (scheduledDate.isNotEmpty && scheduledTime.isNotEmpty) {
+        try {
+          final scheduledDateTime = DateTime.parse('${scheduledDate}T$scheduledTime');
+          final now = DateTime.now();
+
+          if (scheduledDateTime.isAfter(now)) {
+            rideData['scheduled_at'] = scheduledDateTime.toIso8601String();
+            rideData['is_scheduled'] = true;
           } else {
-            // Usuario regular: mostrar mensaje de que necesita ser admin
-            // O redirigir a /welcome
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Solo administradores pueden solicitar viajes desde aquí'),
-                backgroundColor: Colors.orange,
-              ),
-            );
+            throw Exception('La fecha y hora programadas deben ser en el futuro');
           }
+        } catch (e) {
+          throw Exception('Formato de fecha u hora inválido');
         }
-      } catch (e) {
-        // Error al obtener rol
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error verificando permisos: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+      }
+
+      // Create ride in Supabase
+      if (kDebugMode) {
+        debugPrint('Creando viaje con datos: $rideData');
+      }
+
+      await supabaseClient.from('ride_requests').insert(rideData);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Viaje solicitado exitosamente!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Clear form
+        _handleCancel();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error creando viaje: $e');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al solicitar viaje: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
