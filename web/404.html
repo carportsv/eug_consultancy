@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Redirecting...</title>
+  <script>
+    // GitHub Pages 404 handler
+    // Redirect all routes to index.html so Flutter can handle routing
+    var path = window.location.pathname;
+    var search = window.location.search;
+    var hash = window.location.hash;
+    
+    // Base path for GitHub Pages
+    var basePath = '/fzkt_openstreet';
+    
+    // Preserve the full path including hash for Flutter routing
+    var redirectPath = basePath + '/index.html';
+    
+    // Convert path to hash for Flutter routing
+    // Example: /fzkt_openstreet/welcome -> /fzkt_openstreet/index.html#/welcome
+    if (path && path !== basePath + '/' && path !== basePath && path.startsWith(basePath)) {
+      var routePath = path.replace(basePath, '');
+      if (routePath && routePath !== '/') {
+        // Ensure route starts with /
+        if (!routePath.startsWith('/')) {
+          routePath = '/' + routePath;
+        }
+        redirectPath += '#' + routePath;
+      }
+    } else if (hash) {
+      // If there's already a hash, preserve it
+      redirectPath += hash;
+    }
+    
+    if (search) {
+      redirectPath += search;
+    }
+    
+    // Redirect to index.html with the route as hash
+    window.location.replace(redirectPath);
+  </script>
+  <meta http-equiv="refresh" content="0;url=/fzkt_openstreet/index.html">
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>
+

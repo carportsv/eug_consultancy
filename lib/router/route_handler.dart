@@ -39,7 +39,16 @@ class RouteHandler extends StatelessWidget {
         final normalizedFragment = fragment.startsWith('/') ? fragment : '/$fragment';
         final hasWelcomeInUrl = fullUri.contains('/welcome') || fullUri.contains('#/welcome');
 
-        final isWelcomePath = path.endsWith('/welcome') || path == '/welcome';
+        // Normalizar el path removiendo el base-href si está presente
+        String normalizedPath = path;
+        if (path.startsWith('/fzkt_openstreet')) {
+          normalizedPath = path.replaceFirst('/fzkt_openstreet', '');
+          if (normalizedPath.isEmpty) {
+            normalizedPath = '/';
+          }
+        }
+
+        final isWelcomePath = normalizedPath.endsWith('/welcome') || normalizedPath == '/welcome';
         final isWelcomeFragment =
             normalizedFragment.contains('/welcome') ||
             normalizedFragment == '/welcome' ||
