@@ -10,19 +10,17 @@ import 'user_service.dart';
 import '../screens/admin/admin_home_screen.dart';
 import '../screens/welcome/welcome/welcome_screen.dart';
 
-// Importar js_interop solo en web usando importación condicional
-import 'dart:js_interop' if (dart.library.io) 'dart:js_interop_stub.dart' as js_interop;
+// Importar funciones JS interop condicionalmente
+// En web: usa js_interop_web.dart con dart:js_interop
+// En móvil: usa js_interop_mobile.dart con stubs
+import 'js_interop_mobile.dart'
+    if (dart.library.html) 'js_interop_web.dart'
+    show firebaseAuthSignInWithGoogleJS, jsify, dartify;
 
 // Constants
 const _kPrimaryColor = Color(0xFF1D4ED8);
 const _kSpacing = 16.0;
 const _kBorderRadius = 12.0;
-
-// Función top-level para JS interop (necesaria para usar @JS)
-@js_interop.JS('firebaseAuthSignInWithGoogle')
-external js_interop.JSPromise<js_interop.JSObject> _firebaseAuthSignInWithGoogleJS(
-  js_interop.JSObject config,
-);
 
 // This screen handles the UI for the login and the Firebase Google Sign-In logic.
 class LoginScreen extends StatefulWidget {
@@ -42,23 +40,93 @@ class _LoginScreenState extends State<LoginScreen> {
       throw UnsupportedError('Este método solo está disponible en web');
     }
 
-    // Convertir el Map a JSObject
-    final jsConfig = config.jsify() as js_interop.JSObject;
+    try {
+      // En web, usar js_interop directamente
+      // jsify y dartify son funciones top-level importadas condicionalmente
+      final jsConfig = jsify(config);
 
-    // Llamar a la función JavaScript
-    final jsResult = await _firebaseAuthSignInWithGoogleJS(jsConfig).toDart;
+      // Llamar a la función JavaScript y convertir JSPromise a Future
+      final jsPromise = firebaseAuthSignInWithGoogleJS(jsConfig);
 
-    // Extraer los datos del resultado usando dartify
-    final resultMap = jsResult.dartify() as Map?;
-    final credentialData = resultMap?['credential'] as Map?;
-    final idToken = credentialData?['idToken'] as String?;
-    final accessToken = credentialData?['accessToken'] as String?;
+      // Usar toDart para convertir JSPromise a Future
+      // En web, toDart está disponible como extensión de JSPromise
+      dynamic jsResult;
+      try {
+        jsResult = await (jsPromise as dynamic).toDart;
+      } catch (e) {
+        debugPrint('[LoginScreen] Error al convertir JSPromise: ${e.toString()}');
+        // Si el error contiene "POPUP_BLOCKED", relanzar con mensaje más claro
+        final errorStr = e.toString();
+        if (errorStr.contains('POPUP_BLOCKED') || errorStr.contains('popup')) {
+          throw Exception(
+            'POPUP_BLOCKED: El popup fue bloqueado.\n\n'
+            'Por favor, permite popups en tu navegador para este sitio y vuelve a intentar.',
+          );
+        }
+        rethrow;
+      }
 
-    if (idToken == null || accessToken == null) {
-      throw Exception('No se pudieron obtener los tokens de autenticación');
+      // Verificar que jsResult no sea null
+      if (jsResult == null) {
+        throw Exception(
+          'El resultado de la autenticación es null.\n\n'
+          'Esto puede ocurrir si el popup fue bloqueado o cerrado.\n'
+          'Por favor, permite popups en tu navegador para este sitio.',
+        );
+      }
+
+      // Extraer los datos del resultado usando dartify
+      // jsResult es un JSObject cuando viene de toDart
+      final resultMap = dartify(jsResult as dynamic);
+
+      // Verificar que resultMap es un Map antes de acceder
+      if (resultMap is! Map) {
+        throw Exception('Resultado inesperado de la autenticación: ${resultMap.runtimeType}');
+      }
+
+      final credentialData = resultMap['credential'] as Map?;
+      final idToken = credentialData?['idToken'] as String?;
+      final accessToken = credentialData?['accessToken'] as String?;
+
+      // Si no hay tokens en credential, intentar obtener idToken del usuario
+      if (idToken == null && accessToken == null) {
+        // Verificar si hay un usuario en el resultado
+        final userData = resultMap['user'] as Map?;
+        if (userData != null) {
+          debugPrint(
+            '[LoginScreen] ⚠️ No hay credential, pero hay user. El usuario puede estar ya autenticado.',
+          );
+          // Si el usuario ya está autenticado, Firebase Auth puede manejar esto automáticamente
+          // Retornar null para que el código continúe con el flujo normal
+          throw Exception(
+            'No se pudieron obtener los tokens de autenticación del popup.\n'
+            'El usuario puede estar ya autenticado. Verificando estado...',
+          );
+        }
+
+        throw Exception(
+          'No se pudieron obtener los tokens de autenticación. idToken: ${idToken != null}, accessToken: ${accessToken != null}',
+        );
+      }
+
+      // Verificar que al menos idToken esté disponible (requerido por Firebase)
+      if (idToken == null) {
+        debugPrint('[LoginScreen] ⚠️ idToken es null, pero accessToken está disponible');
+        throw Exception('No se pudo obtener el idToken de la autenticación');
+      }
+
+      // accessToken puede ser opcional en algunos casos, pero intentar obtenerlo
+      if (accessToken == null) {
+        debugPrint('[LoginScreen] ⚠️ accessToken es null, pero idToken está disponible');
+        // Firebase puede funcionar solo con idToken en algunos casos
+        // Usar string vacío como fallback
+      }
+
+      return {'idToken': idToken, 'accessToken': accessToken ?? ''};
+    } catch (e) {
+      debugPrint('[LoginScreen] Error en _firebaseAuthSignInWithGoogleWeb: ${e.toString()}');
+      rethrow;
     }
-
-    return {'idToken': idToken, 'accessToken': accessToken};
   }
 
   @override
@@ -167,8 +235,32 @@ class _LoginScreenState extends State<LoginScreen> {
           userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
           debugPrint('[LoginScreen] ✅ Autenticado con Firebase');
         } catch (e) {
-          debugPrint('[LoginScreen] ⚠️ Error con Firebase Auth JS: ${e.toString()}');
-          // Fallback a google_sign_in si Firebase Auth JS falla
+          final errorMessage = e.toString();
+          debugPrint('[LoginScreen] ⚠️ Error con Firebase Auth JS: $errorMessage');
+
+          // Si el error es de popup bloqueado, mostrar mensaje claro y no intentar fallback
+          if (errorMessage.contains('POPUP_BLOCKED') || errorMessage.contains('popup')) {
+            if (mounted) {
+              setState(() => _isLoading = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text(
+                    'El popup fue bloqueado. Por favor, permite popups en tu navegador para este sitio.',
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 5),
+                  action: SnackBarAction(
+                    label: 'Entendido',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  ),
+                ),
+              );
+            }
+            return;
+          }
+
+          // Fallback a google_sign_in solo si el error no es de popup bloqueado
           debugPrint('[LoginScreen] Intentando con google_sign_in como fallback...');
           final GoogleSignIn googleSignIn = GoogleSignIn(
             clientId: webClientId,
@@ -183,10 +275,27 @@ class _LoginScreenState extends State<LoginScreen> {
           }
 
           final googleAuth = await googleUser.authentication;
-          if (googleAuth.accessToken == null || googleAuth.idToken == null) {
+
+          // En web, google_sign_in puede no retornar idToken con el método deprecado
+          // Intentar autenticar solo con accessToken si idToken no está disponible
+          if (googleAuth.accessToken == null) {
             throw Exception(
-              'Error: No se pudo obtener el token de autenticación de Google.\n\n'
+              'Error: No se pudo obtener el token de acceso de Google.\n\n'
               'Por favor, permite popups en tu navegador para este sitio.',
+            );
+          }
+
+          // Si no hay idToken, intentar obtenerlo usando el accessToken
+          if (googleAuth.idToken == null) {
+            debugPrint(
+              '[LoginScreen] ⚠️ idToken no disponible, intentando obtener con accessToken...',
+            );
+            // Intentar usar solo accessToken (puede no funcionar con Firebase Auth)
+            // En este caso, mejor mostrar un error más claro
+            throw Exception(
+              'Error: No se pudo obtener el token de identidad de Google.\n\n'
+              'Esto puede ocurrir si los popups están bloqueados.\n'
+              'Por favor, permite popups en tu navegador para este sitio y vuelve a intentar.',
             );
           }
 

@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../widgets/app_logo_header.dart';
 import '../welcome/welcome/welcome_screen.dart';
 import '../welcome/welcome/request_ride_screen.dart';
 
@@ -89,146 +89,210 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(''),
-        backgroundColor: _kPrimaryColor,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history, color: Colors.white),
-            tooltip: 'Historial de Viajes',
-            onPressed: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Historial de viajes (próximamente)')));
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.person, color: Colors.white),
-            tooltip: 'Mi Perfil',
-            onPressed: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Mi perfil (próximamente)')));
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Cerrar Sesión',
-            onPressed: () => _handleLogout(context),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Colors.white, _kPrimaryColor.withValues(alpha: 0.03)],
+    // Calcular la posición del logo para alinearlo con el botón del usuario en el AppBar
+    final appBarHeight = kToolbarHeight; // Altura estándar del AppBar (56.0)
+    final safeAreaTop = MediaQuery.of(context).padding.top;
+    // Ajustar la posición: centrar el logo con el AppBar pero bajar un poco más (agregar 25px)
+    final logoTopPosition =
+        safeAreaTop +
+        (appBarHeight / 2) -
+        (225 / 2) +
+        25.0; // Centrar verticalmente el logo (225 es el tamaño del logo) y bajar 25px
+
+    // Envolver el Scaffold en un Stack para que el logo quede fuera del área de scroll
+    // El Stack debe cubrir toda la pantalla para que el logo esté completamente fijo
+    // El logo está al mismo nivel que el Scaffold, completamente independiente
+    return Stack(
+      clipBehavior: Clip.none,
+      fit: StackFit.expand, // Asegurar que el Stack cubra toda la pantalla
+      children: [
+        // Scaffold directamente en el Stack (sin Positioned.fill)
+        Scaffold(
+          appBar: AppBar(
+            title: const Text(''),
+            backgroundColor: _kPrimaryColor,
+            elevation: 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.history, color: Colors.white),
+                tooltip: 'Historial de Viajes',
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Historial de viajes (próximamente)')),
+                  );
+                },
               ),
-            ),
-            child: SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Section
-                    _buildHeader(context),
-                    const SizedBox(height: _kSpacing * 3),
+              IconButton(
+                icon: const Icon(Icons.person, color: Colors.white),
+                tooltip: 'Mi Perfil',
+                onPressed: () {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Mi perfil (próximamente)')));
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                tooltip: 'Cerrar Sesión',
+                onPressed: () => _handleLogout(context),
+              ),
+            ],
+          ),
+          body: Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Colors.white, _kPrimaryColor.withValues(alpha: 0.03)],
+                  ),
+                ),
+                child: SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header Section
+                        _buildHeader(context),
+                        const SizedBox(height: _kSpacing * 3),
 
-                    // Main Content - Botón para solicitar viaje
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(_kSpacing * 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(_kBorderRadius * 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
+                        // Main Content - Botón para solicitar viaje
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(_kSpacing * 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(_kBorderRadius * 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              color: _kPrimaryColor.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(Icons.directions_car, size: 50, color: _kPrimaryColor),
-                          ),
-                          const SizedBox(height: _kSpacing * 2),
-                          Text(
-                            '¿Listo para tu próximo viaje?',
-                            style: GoogleFonts.exo(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: _kTextColor,
-                              height: 1.3,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: _kSpacing),
-                          Text(
-                            'Solicita un viaje de manera rápida y fácil',
-                            style: GoogleFonts.exo(
-                              fontSize: 16,
-                              color: Colors.grey.shade600,
-                              height: 1.5,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: _kSpacing * 3),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const RequestRideScreen(),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _kPrimaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(_kBorderRadius),
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 100,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  color: _kPrimaryColor.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
                                 ),
-                                elevation: 3,
-                                shadowColor: _kPrimaryColor.withValues(alpha: 0.4),
+                                child: Icon(Icons.directions_car, size: 50, color: _kPrimaryColor),
                               ),
-                              child: Text(
-                                'Solicitar Viaje',
-                                style: GoogleFonts.exo(fontSize: 18, fontWeight: FontWeight.bold),
+                              const SizedBox(height: _kSpacing * 2),
+                              Text(
+                                '¿Listo para tu próximo viaje?',
+                                style: GoogleFonts.exo(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: _kTextColor,
+                                  height: 1.3,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                            ),
+                              const SizedBox(height: _kSpacing),
+                              Text(
+                                'Solicita un viaje de manera rápida y fácil',
+                                style: GoogleFonts.exo(
+                                  fontSize: 16,
+                                  color: Colors.grey.shade600,
+                                  height: 1.5,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: _kSpacing * 3),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const RequestRideScreen(),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _kPrimaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 32,
+                                      vertical: 18,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(_kBorderRadius),
+                                    ),
+                                    elevation: 3,
+                                    shadowColor: _kPrimaryColor.withValues(alpha: 0.4),
+                                  ),
+                                  child: Text(
+                                    'Solicitar Viaje',
+                                    style: GoogleFonts.exo(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: _kSpacing * 3),
+                        ),
+                        const SizedBox(height: _kSpacing * 3),
 
-                    // Features Section
-                    _buildFeaturesSection(),
-                  ],
+                        // Features Section
+                        _buildFeaturesSection(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Logo fijo que NO se mueve con el scroll - completamente independiente del Scaffold
+        // Alineado con el botón del usuario en el AppBar
+        if (!kIsWeb)
+          Positioned(
+            // En móvil: alineado con el AppBar y más a la izquierda (-4)
+            top: logoTopPosition,
+            left: -4.0,
+            child: IgnorePointer(
+              ignoring: true,
+              child: SizedBox(
+                width: 225,
+                height: 225,
+                child: Container(
+                  padding: const EdgeInsets.all(8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.0),
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: Center(
+                    child: Image.asset(
+                      'assets/images/logo_21.png',
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          padding: const EdgeInsets.all(8.0),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1D4ED8).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          child: const Icon(Icons.local_taxi, size: 209, color: Color(0xFF1D4ED8)),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-          const AppLogoHeader(),
-        ],
-      ),
+      ],
     );
   }
 

@@ -36,16 +36,27 @@ void main() async {
   }
 
   // Initialize Firebase solo si las variables de entorno están cargadas
-  if (envLoaded && Firebase.apps.isEmpty) {
+  if (envLoaded) {
     try {
-      await Firebase.initializeApp(options: await DefaultFirebaseOptions.currentPlatform);
-      debugPrint('✅ Firebase inicializado');
+      // Verificar si Firebase ya está inicializado antes de intentar inicializarlo
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(options: await DefaultFirebaseOptions.currentPlatform);
+        debugPrint('✅ Firebase inicializado');
+      } else {
+        debugPrint('✅ Firebase ya estaba inicializado (hot restart)');
+      }
     } catch (e, stackTrace) {
       // Convertir excepción a string de forma segura para Flutter Web
       final errorMessage = e.toString();
       final stackTraceMessage = stackTrace.toString();
-      debugPrint('❌ Error inicializando Firebase: $errorMessage');
-      debugPrint('Stack trace: $stackTraceMessage');
+
+      // Ignorar el error de app duplicada (común en hot restart)
+      if (errorMessage.contains('duplicate-app') || errorMessage.contains('already exists')) {
+        debugPrint('⚠️ Firebase ya inicializado (ignorando error de app duplicada)');
+      } else {
+        debugPrint('❌ Error inicializando Firebase: $errorMessage');
+        debugPrint('Stack trace: $stackTraceMessage');
+      }
       // Continuar aunque Firebase falle - la app mostrará un error en AuthGate
     }
   }

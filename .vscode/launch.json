@@ -5,7 +5,7 @@
             "name": "Launch Chrome",
             "request": "launch",
             "type": "chrome",
-            "url": "http://localhost:8080",
+            "url": "http://localhost:4343",
             "webRoot": "${workspaceFolder}"
         },
         {
@@ -42,33 +42,33 @@
             "program": "lib/main.dart"
         },
         {
-            "name": "🚀 Flutter Web (Chrome) - Puerto 8000",
+            "name": "🚀 Flutter Web (Chrome) - Puerto 4343",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "deviceId": "chrome",
             "args": [
-                "--web-port=8000"
+                "--web-port=4343"
             ]
         },
         {
-            "name": "Flutter Web (Edge) - Puerto 8000",
+            "name": "Flutter Web (Edge) - Puerto 4343",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "deviceId": "edge",
             "args": [
-                "--web-port=8000"
+                "--web-port=4343"
             ]
         },
         {
-            "name": "Flutter Web Server - Puerto 8000",
+            "name": "Flutter Web Server - Puerto 4343",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "deviceId": "web-server",
             "args": [
-                "--web-port=8000"
+                "--web-port=4343"
             ]
         }
     ]

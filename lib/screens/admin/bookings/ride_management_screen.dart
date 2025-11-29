@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../widgets/app_logo_header.dart';
 
 // Modelo para las tarjetas de estadísticas
 class _StatCardItem {
@@ -128,7 +127,6 @@ class RideManagementScreen extends StatelessWidget {
               ],
             ),
           ),
-          const AppLogoHeader(),
         ],
       ),
     );

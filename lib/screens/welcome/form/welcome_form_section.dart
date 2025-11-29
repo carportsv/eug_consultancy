@@ -31,6 +31,8 @@ class WelcomeFormSection extends StatelessWidget {
   final LatLng? destinationCoords;
   final double? distanceKm;
   final double? estimatedPrice;
+  final String selectedVehicleType;
+  final Function(String) onVehicleTypeChanged;
 
   // Callbacks
   final Function(String, String) onAddressInputChanged;
@@ -56,6 +58,8 @@ class WelcomeFormSection extends StatelessWidget {
     required this.destinationCoords,
     required this.distanceKm,
     required this.estimatedPrice,
+    required this.selectedVehicleType,
+    required this.onVehicleTypeChanged,
     required this.onAddressInputChanged,
     required this.onSelectAddress,
     required this.onSelectPickupDate,
@@ -130,6 +134,9 @@ class WelcomeFormSection extends StatelessWidget {
           maxPassengers: maxPassengers,
           onChanged: onPassengersChanged,
         ),
+        const SizedBox(height: _kSpacing),
+        // Selector de tipo de vehículo
+        _buildVehicleSelection(),
         const SizedBox(height: _kSpacing * 2),
 
         // Campos de distancia y precio (si están disponibles)
@@ -188,6 +195,230 @@ class WelcomeFormSection extends StatelessWidget {
               },
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVehicleSelection() {
+    final vehicles = [
+      {
+        'type': 'sedan',
+        'name': 'Sedan',
+        'passengers': 3,
+        'handLuggage': 1,
+        'checkInLuggage': 0,
+        'icon': Icons.directions_car,
+      },
+      {
+        'type': 'business',
+        'name': 'Business',
+        'passengers': 6,
+        'handLuggage': 2,
+        'checkInLuggage': 2,
+        'icon': Icons.airport_shuttle,
+      },
+      {
+        'type': 'van',
+        'name': 'Minivan 7pax',
+        'passengers': 8,
+        'handLuggage': 3,
+        'checkInLuggage': 4,
+        'icon': Icons.local_shipping,
+      },
+      {
+        'type': 'luxury',
+        'name': 'Minivan Luxury 6pax',
+        'passengers': 6,
+        'handLuggage': 2,
+        'checkInLuggage': 1,
+        'icon': Icons.directions_car_filled,
+      },
+      {
+        'type': 'minibus_8pax',
+        'name': 'Minibus 8pax',
+        'passengers': 8,
+        'handLuggage': 4,
+        'checkInLuggage': 6,
+        'icon': Icons.airport_shuttle,
+      },
+      {
+        'type': 'bus_16pax',
+        'name': 'Bus 16pax',
+        'passengers': 16,
+        'handLuggage': 8,
+        'checkInLuggage': 12,
+        'icon': Icons.directions_bus,
+      },
+      {
+        'type': 'bus_19pax',
+        'name': 'Bus 19pax',
+        'passengers': 19,
+        'handLuggage': 10,
+        'checkInLuggage': 15,
+        'icon': Icons.directions_bus,
+      },
+      {
+        'type': 'bus_50pax',
+        'name': 'Bus 50pax',
+        'passengers': 50,
+        'handLuggage': 25,
+        'checkInLuggage': 30,
+        'icon': Icons.directions_bus_filled,
+      },
+    ];
+
+    final selectedVehicle = vehicles.firstWhere(
+      (v) => v['type'] == selectedVehicleType,
+      orElse: () => vehicles[0],
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(_kSpacing),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+        borderRadius: BorderRadius.circular(_kBorderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.directions_car, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Tipo de Vehículo',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+              ),
+            ],
+          ),
+          const SizedBox(height: _kSpacing),
+          // Vehicle selector dropdown
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+            ),
+            child: DropdownButtonFormField<String>(
+              initialValue: selectedVehicleType,
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                filled: true,
+                fillColor: Colors.transparent,
+                prefixIcon: Icon(selectedVehicle['icon'] as IconData, color: Colors.white),
+              ),
+              dropdownColor: Colors.white.withValues(alpha: 0.65),
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+              isExpanded: true,
+              items: vehicles
+                  .map(
+                    (v) => DropdownMenuItem<String>(
+                      value: v['type'] as String,
+                      child: Row(
+                        children: [
+                          Icon(v['icon'] as IconData, color: Colors.black87, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              v['name'] as String,
+                              style: const TextStyle(color: Colors.black87, fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  onVehicleTypeChanged(val);
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: _kSpacing),
+          // Selected vehicle details
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildVehicleDetail(
+                    icon: Icons.people,
+                    label: 'Pasajeros',
+                    value: '${selectedVehicle['passengers']}',
+                  ),
+                ),
+                Container(width: 1, height: 30, color: Colors.white.withValues(alpha: 0.3)),
+                Expanded(
+                  child: _buildVehicleDetail(
+                    icon: Icons.luggage,
+                    label: 'Equipaje de mano',
+                    value: '${selectedVehicle['handLuggage']}',
+                  ),
+                ),
+                Container(width: 1, height: 30, color: Colors.white.withValues(alpha: 0.3)),
+                Expanded(
+                  child: _buildVehicleDetail(
+                    icon: Icons.luggage_outlined,
+                    label: 'Equipaje facturado',
+                    value: '${selectedVehicle['checkInLuggage']}',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVehicleDetail({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          label,
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11),
+          textAlign: TextAlign.center,
         ),
       ],
     );

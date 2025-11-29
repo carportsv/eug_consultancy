@@ -31,9 +31,9 @@ class _RoutingScreenState extends State<RoutingScreen> {
   Future<void> _redirectUser() async {
     // Pequeño delay para asegurar que el contexto esté listo
     await Future.delayed(const Duration(milliseconds: 100));
-    
+
     if (!mounted) return;
-    
+
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -48,7 +48,7 @@ class _RoutingScreenState extends State<RoutingScreen> {
 
     // Navegar inmediatamente con rol por defecto, luego actualizar si es necesario
     Widget destination = const UserHomeScreen();
-    
+
     // CRÍTICO: Sincronizar PRIMERO para asegurar que el usuario existe en Supabase
     // Esto es especialmente importante en web donde puede ser la primera vez
     try {
@@ -58,52 +58,71 @@ class _RoutingScreenState extends State<RoutingScreen> {
     } catch (e) {
       debugPrint('[RoutingScreen] Error en sincronización: $e. Continuando...');
     }
-    
-    // Intentar obtener el rol con timeout más largo (5 segundos para web)
-    try {
-      debugPrint('[RoutingScreen] Obteniendo rol del usuario: ${user.uid}');
-      final role = await _userService.getUserRole(user.uid)
-          .timeout(const Duration(seconds: 5), onTimeout: () {
-        debugPrint('[RoutingScreen] ⚠️ Timeout getting role, using default "user"');
-        return 'user';
-      });
-      
-      if (!mounted) return;
 
-      debugPrint('[RoutingScreen] ✅ User role obtenido: $role');
-      
-      switch (role) {
-        case 'admin':
-          destination = const AdminHomeScreen();
-          break;
-        case 'driver':
-          destination = const DriverHomeScreen();
-          break;
-        default:
-          destination = const UserHomeScreen();
-          break;
+    // Intentar obtener el rol con múltiples intentos para evitar confusión
+    String role = 'user'; // Valor por defecto
+    int maxAttempts = 3;
+    int attempt = 0;
+    bool roleObtained = false;
+
+    while (!roleObtained && attempt < maxAttempts) {
+      attempt++;
+      try {
+        debugPrint(
+          '[RoutingScreen] Intento $attempt/$maxAttempts: Obteniendo rol del usuario: ${user.uid}',
+        );
+        role = await _userService
+            .getUserRole(user.uid)
+            .timeout(
+              const Duration(seconds: 5),
+              onTimeout: () {
+                debugPrint('[RoutingScreen] ⚠️ Timeout en intento $attempt/$maxAttempts');
+                return 'user'; // Retornar 'user' en caso de timeout
+              },
+            );
+
+        roleObtained = true;
+        debugPrint('[RoutingScreen] ✅ User role obtenido en intento $attempt: $role');
+      } catch (e) {
+        debugPrint('[RoutingScreen] ❌ Error en intento $attempt/$maxAttempts: $e');
+        if (attempt < maxAttempts) {
+          // Esperar un poco antes de reintentar
+          await Future.delayed(Duration(milliseconds: 500 * attempt));
+        } else {
+          // Si es el último intento y falló, usar 'user' por defecto
+          debugPrint(
+            '[RoutingScreen] ⚠️ No se pudo obtener el rol después de $maxAttempts intentos. Usando "user" por defecto.',
+          );
+          debugPrint('[RoutingScreen] ⚠️ UID del usuario: ${user.uid}, Email: ${user.email}');
+        }
       }
-    } catch (e) {
-      debugPrint('[RoutingScreen] ❌ Error getting role: $e. Using default "user".');
-      // Continuar con destino por defecto
+    }
+
+    if (!mounted) return;
+
+    switch (role) {
+      case 'admin':
+        destination = const AdminHomeScreen();
+        break;
+      case 'driver':
+        destination = const DriverHomeScreen();
+        break;
+      default:
+        destination = const UserHomeScreen();
+        break;
     }
 
     // Navegar inmediatamente
     if (mounted) {
       debugPrint('[RoutingScreen] 🚀 Navigating to destination...');
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => destination),
-        (route) => false,
-      );
+      Navigator.of(
+        context,
+      ).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => destination), (route) => false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

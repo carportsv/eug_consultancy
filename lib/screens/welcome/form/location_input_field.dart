@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../l10n/app_localizations.dart';
 import 'autocomplete_item.dart';
@@ -37,6 +38,13 @@ class LocationInputField extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final fieldType = isPickup ? 'pickup' : 'dropoff';
     final isActive = activeInputType == fieldType;
+
+    // Debug: verificar estado del autocompletado
+    if (kDebugMode && autocompleteResults.isNotEmpty) {
+      debugPrint(
+        '[LocationInputField] $fieldType - isActive: $isActive, results: ${autocompleteResults.length}',
+      );
+    }
     final originHint = (l10n != null && !l10n.originPlaceholder.startsWith('form.'))
         ? l10n.originPlaceholder
         : '¿Dónde te recogemos?';
@@ -53,7 +61,9 @@ class LocationInputField extends StatelessWidget {
           TextFormField(
             controller: controller,
             focusNode: focusNode,
-            readOnly: !isActive,
+            enabled: true, // Siempre habilitado para permitir escritura
+            keyboardType: TextInputType.streetAddress,
+            textInputAction: TextInputAction.next,
             style: GoogleFonts.exo(fontSize: 16, color: Colors.white), // Texto blanco
             decoration: InputDecoration(
               labelText: label,
@@ -98,25 +108,31 @@ class LocationInputField extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.6),
               ), // Hint blanco
             ),
-            onTap: () {
-              // Notificar al padre que este campo está activo
-              onAddressInputChanged('', fieldType);
-              focusNode.requestFocus();
+            onTapOutside: (event) {
+              // Cuando el usuario toca fuera, quitar el focus
+              focusNode.unfocus();
             },
-            onChanged: isActive ? (value) => onAddressInputChanged(value, fieldType) : null,
+            onChanged: (value) {
+              // Siempre permitir cambios y activar el campo automáticamente
+              onAddressInputChanged(value, fieldType);
+            },
+            onEditingComplete: () {
+              // Cuando el usuario presiona "siguiente" o "enter"
+              focusNode.unfocus();
+            },
           ),
           // Lista de resultados de autocompletado
           if (autocompleteResults.isNotEmpty && isActive)
             Container(
               margin: const EdgeInsets.only(top: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2), // Más transparente
-                border: Border.all(color: _kPrimaryColor.withValues(alpha: 0.2)),
+                color: Colors.white.withValues(alpha: 0.95), // Más opaco para mejor visibilidad
+                border: Border.all(color: _kPrimaryColor.withValues(alpha: 0.3)),
                 borderRadius: BorderRadius.circular(_kBorderRadius),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 8,
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -124,6 +140,8 @@ class LocationInputField extends StatelessWidget {
               constraints: const BoxConstraints(maxHeight: 250),
               child: ListView.builder(
                 shrinkWrap: true,
+                physics:
+                    const ClampingScrollPhysics(), // Mejor para móvil dentro de SingleChildScrollView
                 itemCount: autocompleteResults.length,
                 itemBuilder: (context, index) {
                   final result = autocompleteResults[index];

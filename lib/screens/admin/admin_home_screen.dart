@@ -31,7 +31,6 @@ import 'pricing/discounts_surcharge_location_screen.dart';
 import 'pricing/vouchers_screen.dart';
 import '../../auth/login_screen.dart';
 import '../../auth/supabase_service.dart';
-import '../../widgets/app_logo_header.dart';
 import 'package:flutter/foundation.dart';
 
 class AdminHomeScreen extends StatefulWidget {
@@ -433,7 +432,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('')),
       drawer: _buildAdminDrawer(isExpanded: true),
-      body: Stack(children: [_selectedContent, const AppLogoHeader()]),
+      body: _selectedContent,
     );
   }
 
@@ -475,7 +474,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                   ],
                 ),
-                const AppLogoHeader(),
               ],
             ),
           ),

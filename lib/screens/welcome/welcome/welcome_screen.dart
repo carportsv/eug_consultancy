@@ -63,6 +63,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   double? _distanceKm;
   double? _estimatedPrice;
 
+  // Tipo de vehículo seleccionado
+  String _selectedVehicleType = 'sedan'; // sedan, business, van, luxury
+
   // Lista de vehículos - ahora se obtiene de VehicleData
   List<Map<String, dynamic>> get _vehicles => VehicleData.vehicles;
 
@@ -126,6 +129,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       _currentUser = null;
       _authSubscription = null;
     }
+
+    // Agregar listeners a los FocusNodes para activar el campo cuando recibe focus
+    _pickupFocusNode.addListener(() {
+      if (_pickupFocusNode.hasFocus) {
+        _onAddressInputChanged('', 'pickup');
+      }
+    });
+
+    _dropoffFocusNode.addListener(() {
+      if (_dropoffFocusNode.hasFocus) {
+        _onAddressInputChanged('', 'dropoff');
+      }
+    });
   }
 
   @override
@@ -381,6 +397,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             initialTime: _parseTimeFromText(_timeController.text),
             initialPassengers: _passengers,
             initialEstimatedPrice: _estimatedPrice,
+            initialOriginCoords: _originCoords,
+            initialDestinationCoords: _destinationCoords,
+            initialVehicleType: _selectedVehicleType,
           ),
           settings: const RouteSettings(name: '/request-ride'),
         ),
@@ -447,22 +466,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                     ),
                   ],
-                ),
-              ),
-              // Contenedor 3: Información adicional (abajo)
-              Transform.translate(
-                offset: const Offset(0, -40),
-                child: Container(
-                  width: double.infinity,
-                  height: 150, // Altura reducida
-                  color: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 0.0),
-                  child: const Center(
-                    child: Text(
-                      'Contenedor adicional - Contenido por definir',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -540,6 +543,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 ),
               ],
             ),
+            // Contenedor 3: Información adicional (abajo) - Dentro del scroll
+            const SizedBox(height: _kSpacing * 2),
+            Container(
+              width: double.infinity,
+              height: 150,
+              color: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: _kSpacing),
+              child: const Center(
+                child: Text(
+                  'Contenedor adicional - Contenido por definir',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            ),
+            const SizedBox(height: _kSpacing * 2),
           ],
         ),
       ),
@@ -562,6 +580,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       destinationCoords: _destinationCoords,
       distanceKm: _distanceKm,
       estimatedPrice: _estimatedPrice,
+      selectedVehicleType: _selectedVehicleType,
+      onVehicleTypeChanged: (vehicleType) {
+        setState(() {
+          _selectedVehicleType = vehicleType;
+        });
+        // Recalcular precio cuando cambia el tipo de vehículo
+        if (_originCoords != null && _destinationCoords != null) {
+          _calculateDistanceAndPrice();
+        }
+      },
       onAddressInputChanged: _onAddressInputChanged,
       onSelectAddress: _selectAddressFromAutocomplete,
       onSelectPickupDate: _selectPickupDate,
@@ -660,7 +688,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Widget _buildNarrowLayout() {
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.fromLTRB(24.0, 84.0, 24.0, 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -674,6 +702,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             _buildFormSection(),
             const SizedBox(height: _kSpacing * 2),
             SizedBox(height: 298, child: VehicleCarousel(vehicles: _vehicles)),
+            const SizedBox(height: _kSpacing * 2),
+            // Contenedor 3: Información adicional (abajo) - Solo para móvil, dentro del scroll
+            Container(
+              width: double.infinity,
+              height: 150, // Altura reducida
+              color: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 0.0),
+              child: const Center(
+                child: Text(
+                  'Contenedor adicional - Contenido por definir',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -688,20 +730,45 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       _activeInputType = type;
     });
 
+    if (kDebugMode) {
+      debugPrint(
+        '[WelcomeScreen] _onAddressInputChanged: type=$type, query="$query", length=${query.length}',
+      );
+    }
+
     if (query.length < 2) {
       setState(() {
         _autocompleteResults = [];
       });
+      if (kDebugMode) {
+        debugPrint('[WelcomeScreen] Query muy corta, limpiando resultados');
+      }
       return;
     }
 
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+    // Aumentar debounce a 500ms para reducir peticiones y cumplir con rate limiting
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
       try {
+        if (kDebugMode) {
+          debugPrint('[WelcomeScreen] Buscando direcciones para: "$query"');
+        }
         final results = await AddressAutocompleteService.searchAddresses(query);
+        if (kDebugMode) {
+          debugPrint('[WelcomeScreen] Resultados encontrados: ${results.length}');
+        }
         if (mounted && _activeInputType == type) {
           setState(() {
             _autocompleteResults = results;
           });
+          if (kDebugMode) {
+            debugPrint(
+              '[WelcomeScreen] Autocompletado actualizado: ${results.length} resultados para $type',
+            );
+          }
+        } else if (kDebugMode) {
+          debugPrint(
+            '[WelcomeScreen] No actualizando: mounted=$mounted, activeInputType=$_activeInputType, type=$type',
+          );
         }
       } catch (e) {
         // Manejo seguro de excepciones para Flutter Web
@@ -747,18 +814,22 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     }
   }
 
-  void _calculateDistanceAndPrice() {
+  Future<void> _calculateDistanceAndPrice() async {
     if (_originCoords == null || _destinationCoords == null) return;
 
-    final result = RideCalculationService.calculateDistanceAndPrice(
+    final result = await RideCalculationService.calculateDistanceAndPrice(
       _originCoords,
       _destinationCoords,
+      vehicleType: _selectedVehicleType,
+      useFixedPlaces: true,
     );
 
-    setState(() {
-      _distanceKm = result['distance'];
-      _estimatedPrice = result['price'];
-    });
+    if (mounted) {
+      setState(() {
+        _distanceKm = result['distance'];
+        _estimatedPrice = result['price'];
+      });
+    }
   }
 
   Widget _buildFeatureItem(IconData icon, String text) {

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/auth_gate.dart';
+import '../auth/user_service.dart';
 import '../screens/welcome/welcome/welcome_screen.dart';
 
 /// Widget que maneja las rutas basándose en la URL actual
@@ -59,7 +61,7 @@ class RouteHandler extends StatelessWidget {
             normalizedFragment.contains('/welcome') ||
             fragment == 'welcome' ||
             fragment == '/welcome';
-        // Mostrar WelcomeScreen en la ruta raíz (/) o en /welcome
+        // Verificar si es la ruta raíz (/) - esta va a Admin
         final isRootPath = normalizedPath == '/' || normalizedPath.isEmpty;
 
         if (kDebugMode) {
@@ -71,17 +73,22 @@ class RouteHandler extends StatelessWidget {
           debugPrint('[RouteHandler] isRootPath: $isRootPath');
         }
 
-        // Mostrar WelcomeScreen si es la ruta raíz (/) o /welcome
-        if (isRootPath || isWelcomePath || isWelcomeFragment || hasWelcomeInUrl) {
+        // Mostrar WelcomeScreen SOLO si es /welcome (no en la raíz)
+        if (isWelcomePath || isWelcomeFragment || hasWelcomeInUrl) {
           if (kDebugMode) {
-            debugPrint('[RouteHandler] Showing WelcomeScreen');
+            debugPrint('[RouteHandler] Showing WelcomeScreen (public for users)');
           }
           return const WelcomeScreen();
         }
 
-        // Para cualquier otra ruta, mostrar AuthGate
+        // Para la ruta raíz (/) o cualquier otra ruta, mostrar AuthGate
+        // Esto redirige a Admin si es admin, o a login si no está autenticado
         if (kDebugMode) {
-          debugPrint('[RouteHandler] Showing AuthGate');
+          if (isRootPath) {
+            debugPrint('[RouteHandler] Root path (/) - Showing AuthGate (will redirect to Admin)');
+          } else {
+            debugPrint('[RouteHandler] Other path - Showing AuthGate');
+          }
         }
         return const AuthGate();
       } catch (e) {
@@ -94,8 +101,115 @@ class RouteHandler extends StatelessWidget {
         return const AuthGate();
       }
     } else {
-      // En móvil, siempre mostrar AuthGate
-      return const AuthGate();
+      // En móvil, detectar tipo de usuario
+      return const _MobileRouteHandler();
     }
+  }
+}
+
+/// Widget que maneja las rutas en móvil detectando el tipo de usuario
+class _MobileRouteHandler extends StatefulWidget {
+  const _MobileRouteHandler();
+
+  @override
+  State<_MobileRouteHandler> createState() => _MobileRouteHandlerState();
+}
+
+class _MobileRouteHandlerState extends State<_MobileRouteHandler> {
+  final UserService _userService = UserService();
+  bool _isChecking = true;
+  Widget? _initialRoute;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUserType();
+  }
+
+  Future<void> _checkUserType() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        // No hay usuario autenticado → WelcomeScreen (público para users)
+        if (mounted) {
+          setState(() {
+            _initialRoute = const WelcomeScreen();
+            _isChecking = false;
+          });
+        }
+        if (kDebugMode) {
+          debugPrint('[RouteHandler Mobile] No hay usuario autenticado → WelcomeScreen (público)');
+        }
+        return;
+      }
+
+      // Hay usuario autenticado → verificar su rol
+      try {
+        final role = await _userService.getUserRole(user.uid)
+            .timeout(const Duration(seconds: 3), onTimeout: () {
+          if (kDebugMode) {
+            debugPrint('[RouteHandler Mobile] Timeout obteniendo rol, usando "user" por defecto');
+          }
+          return 'user';
+        });
+
+        if (mounted) {
+          setState(() {
+            if (role == 'admin' || role == 'driver') {
+              // Driver/Admin → AuthGate (login obligatorio o redirige según rol)
+              _initialRoute = const AuthGate();
+              if (kDebugMode) {
+                debugPrint('[RouteHandler Mobile] Usuario es $role → AuthGate');
+              }
+            } else {
+              // User → WelcomeScreen (público, puede usar sin login adicional)
+              _initialRoute = const WelcomeScreen();
+              if (kDebugMode) {
+                debugPrint('[RouteHandler Mobile] Usuario es user → WelcomeScreen (público)');
+              }
+            }
+            _isChecking = false;
+          });
+        }
+      } catch (e) {
+        // Error obteniendo rol → asumir user y mostrar WelcomeScreen
+        if (mounted) {
+          setState(() {
+            _initialRoute = const WelcomeScreen();
+            _isChecking = false;
+          });
+        }
+        if (kDebugMode) {
+          debugPrint('[RouteHandler Mobile] Error obteniendo rol: $e → WelcomeScreen (público)');
+        }
+      }
+    } catch (e) {
+      // Error general → mostrar WelcomeScreen como fallback
+      if (mounted) {
+        setState(() {
+          _initialRoute = const WelcomeScreen();
+          _isChecking = false;
+        });
+      }
+      if (kDebugMode) {
+        debugPrint('[RouteHandler Mobile] Error general: $e → WelcomeScreen (fallback)');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isChecking) {
+      // Mostrar loading mientras verifica
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // Retornar la ruta determinada
+    return _initialRoute ?? const WelcomeScreen();
   }
 }

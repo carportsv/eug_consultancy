@@ -46,7 +46,7 @@ class AutocompleteItem extends StatelessWidget {
                 style: GoogleFonts.exo(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white, // Blanco
+                  color: Colors.black87, // Negro para mejor contraste con fondo blanco
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

@@ -25,7 +25,47 @@ window.firebaseAuthSignInWithGoogle = async function(firebaseConfig) {
     provider.addScope('profile');
 
     // Usar signInWithPopup (más confiable que signInWithRedirect)
-    const result = await auth.signInWithPopup(provider);
+    let result;
+    try {
+      result = await auth.signInWithPopup(provider);
+    } catch (popupError) {
+      // Si el popup está bloqueado, lanzar error específico
+      if (popupError.code === 'auth/popup-blocked' || 
+          popupError.code === 'auth/popup-closed-by-user' ||
+          (popupError.message && popupError.message.includes('POPUP_BLOCKED'))) {
+        throw new Error('POPUP_BLOCKED: El popup fue bloqueado. Por favor, permite popups para este sitio.');
+      }
+      throw popupError;
+    }
+    
+    // Verificar que el resultado sea válido
+    if (!result) {
+      throw new Error('No se pudo obtener el resultado de la autenticación');
+    }
+    
+    // Verificar que result.credential existe
+    if (!result.credential) {
+      // Si no hay credential pero hay user, puede ser que ya esté autenticado
+      // En este caso, intentar obtener el token del usuario actual
+      if (result.user) {
+        const idToken = await result.user.getIdToken();
+        const accessToken = result.user.accessToken || null;
+        
+        return {
+          user: {
+            uid: result.user.uid,
+            email: result.user.email,
+            displayName: result.user.displayName,
+            photoURL: result.user.photoURL,
+          },
+          credential: {
+            idToken: idToken,
+            accessToken: accessToken,
+          }
+        };
+      }
+      throw new Error('No se pudo obtener el resultado de la autenticación');
+    }
     
     // Retornar el resultado con los tokens
     return {
@@ -41,10 +81,7 @@ window.firebaseAuthSignInWithGoogle = async function(firebaseConfig) {
       }
     };
   } catch (error) {
-    // Si el popup está bloqueado, intentar con redirect
-    if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-      throw new Error('POPUP_BLOCKED: El popup fue bloqueado. Por favor, permite popups para este sitio.');
-    }
+    console.error('[firebaseAuthSignInWithGoogle] Error:', error);
     throw error;
   }
 };

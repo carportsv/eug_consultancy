@@ -13,7 +13,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../auth/login_screen.dart';
 import '../../../auth/supabase_service.dart';
 import '../../../services/ride_service.dart';
-import '../../../widgets/app_logo_header.dart';
 import 'welcome_screen.dart';
 
 // Constants
@@ -30,6 +29,9 @@ class RequestRideScreen extends StatefulWidget {
   final TimeOfDay? initialTime;
   final int? initialPassengers;
   final double? initialEstimatedPrice;
+  final LatLng? initialOriginCoords;
+  final LatLng? initialDestinationCoords;
+  final String? initialVehicleType;
 
   const RequestRideScreen({
     super.key,
@@ -39,6 +41,9 @@ class RequestRideScreen extends StatefulWidget {
     this.initialTime,
     this.initialPassengers,
     this.initialEstimatedPrice,
+    this.initialOriginCoords,
+    this.initialDestinationCoords,
+    this.initialVehicleType,
   });
 
   @override
@@ -158,6 +163,39 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     }
     if (widget.initialEstimatedPrice != null) {
       _priceController.text = widget.initialEstimatedPrice!.toStringAsFixed(2);
+    }
+
+    // Inicializar tipo de vehículo si viene desde WelcomeScreen
+    if (widget.initialVehicleType != null) {
+      _selectedVehicleType = widget.initialVehicleType!;
+    }
+
+    // Inicializar coordenadas si vienen desde WelcomeScreen
+    if (widget.initialOriginCoords != null) {
+      _originCoords = widget.initialOriginCoords;
+      _originMarker = Marker(
+        point: _originCoords!,
+        width: 40,
+        height: 40,
+        child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+      );
+    }
+    if (widget.initialDestinationCoords != null) {
+      _destinationCoords = widget.initialDestinationCoords;
+      _destinationMarker = Marker(
+        point: _destinationCoords!,
+        width: 40,
+        height: 40,
+        child: const Icon(Icons.flag, color: Colors.green, size: 40),
+      );
+    }
+
+    // Si hay ambas coordenadas, calcular la ruta
+    if (widget.initialOriginCoords != null && widget.initialDestinationCoords != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _calculateRoute();
+        _updateMapBounds();
+      });
     }
 
     // Cargar datos del usuario si está autenticado
@@ -611,7 +649,6 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
               ),
             ),
           ),
-          const AppLogoHeader(),
         ],
       ),
     );
@@ -1385,9 +1422,55 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   Widget _buildVehicleSelection() {
     final vehicles = [
       {'type': 'sedan', 'name': 'Sedan', 'passengers': 3, 'handLuggage': 1, 'checkInLuggage': 0},
-      {'type': 'suv', 'name': 'SUV', 'passengers': 6, 'handLuggage': 2, 'checkInLuggage': 2},
-      {'type': 'van', 'name': 'Van', 'passengers': 8, 'handLuggage': 3, 'checkInLuggage': 4},
-      {'type': 'luxury', 'name': 'Luxury', 'passengers': 3, 'handLuggage': 2, 'checkInLuggage': 1},
+      {
+        'type': 'business',
+        'name': 'Business',
+        'passengers': 6,
+        'handLuggage': 2,
+        'checkInLuggage': 2,
+      },
+      {
+        'type': 'van',
+        'name': 'Minivan 7pax',
+        'passengers': 8,
+        'handLuggage': 3,
+        'checkInLuggage': 4,
+      },
+      {
+        'type': 'luxury',
+        'name': 'Minivan Luxury 6pax',
+        'passengers': 6,
+        'handLuggage': 2,
+        'checkInLuggage': 1,
+      },
+      {
+        'type': 'minibus_8pax',
+        'name': 'Minibus 8pax',
+        'passengers': 8,
+        'handLuggage': 4,
+        'checkInLuggage': 6,
+      },
+      {
+        'type': 'bus_16pax',
+        'name': 'Bus 16pax',
+        'passengers': 16,
+        'handLuggage': 8,
+        'checkInLuggage': 12,
+      },
+      {
+        'type': 'bus_19pax',
+        'name': 'Bus 19pax',
+        'passengers': 19,
+        'handLuggage': 10,
+        'checkInLuggage': 15,
+      },
+      {
+        'type': 'bus_50pax',
+        'name': 'Bus 50pax',
+        'passengers': 50,
+        'handLuggage': 25,
+        'checkInLuggage': 30,
+      },
     ];
 
     final selectedVehicle = vehicles.firstWhere(
@@ -1458,33 +1541,39 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
           ),
           const SizedBox(width: 12),
           // Vehicle type dropdown
-          SizedBox(
-            width: 120,
-            child: DropdownButtonFormField<String>(
-              initialValue: _selectedVehicleType,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          Flexible(
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 150, maxWidth: 200),
+              child: DropdownButtonFormField<String>(
+                initialValue: _selectedVehicleType,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  isDense: true,
+                ),
+                isExpanded: true,
+                items: vehicles
+                    .map(
+                      (v) => DropdownMenuItem<String>(
+                        value: v['type'] as String,
+                        child: Text(v['name'] as String, overflow: TextOverflow.ellipsis),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _selectedVehicleType = val;
+                      final vehicle = vehicles.firstWhere((v) => v['type'] == val);
+                      _passengerCount = vehicle['passengers'] as int;
+                      _handLuggage = vehicle['handLuggage'] as int;
+                      _checkInLuggage = vehicle['checkInLuggage'] as int;
+                    });
+                    // Recalcular precio cuando cambia el tipo de vehículo
+                    _recalculatePriceForVehicleType();
+                  }
+                },
               ),
-              items: vehicles
-                  .map(
-                    (v) => DropdownMenuItem<String>(
-                      value: v['type'] as String,
-                      child: Text(v['name'] as String),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    _selectedVehicleType = val;
-                    final vehicle = vehicles.firstWhere((v) => v['type'] == val);
-                    _passengerCount = vehicle['passengers'] as int;
-                    _handLuggage = vehicle['handLuggage'] as int;
-                    _checkInLuggage = vehicle['checkInLuggage'] as int;
-                  });
-                }
-              },
             ),
           ),
         ],
@@ -2148,6 +2237,62 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     if (_originCoords == null || _destinationCoords == null) return;
 
     try {
+      // Calcular distancia directa
+      final distance = const Distance();
+      final distanceInKm = distance.as(LengthUnit.Kilometer, _originCoords!, _destinationCoords!);
+      _distanceController.text = distanceInKm.toStringAsFixed(2);
+
+      // Intentar obtener ruta real usando OSRM
+      try {
+        final response = await http
+            .get(
+              Uri.parse(
+                'https://router.project-osrm.org/route/v1/driving/'
+                '${_originCoords!.longitude},${_originCoords!.latitude};'
+                '${_destinationCoords!.longitude},${_destinationCoords!.latitude}?'
+                'overview=full&geometries=geojson',
+              ),
+              headers: {'Accept': 'application/json'},
+            )
+            .timeout(const Duration(seconds: 5));
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body) as Map<String, dynamic>;
+          final routes = data['routes'] as List<dynamic>?;
+          if (routes != null && routes.isNotEmpty) {
+            final route = routes[0] as Map<String, dynamic>;
+            final geometry = route['geometry'] as Map<String, dynamic>?;
+            final coordinates = geometry?['coordinates'] as List<dynamic>?;
+
+            if (coordinates != null && coordinates.isNotEmpty) {
+              final points = coordinates.map((coord) {
+                final coordList = coord as List<dynamic>;
+                return LatLng(coordList[1] as double, coordList[0] as double);
+              }).toList();
+
+              // Actualizar distancia con la ruta real
+              final distanceInMeters = (route['distance'] as num?)?.toDouble() ?? 0.0;
+              final distanceInKmReal = distanceInMeters / 1000.0;
+              _distanceController.text = distanceInKmReal.toStringAsFixed(2);
+
+              setState(() {
+                _routePolyline = Polyline(points: points, strokeWidth: 4.0, color: Colors.blue);
+              });
+
+              // Recalcular precio con la distancia real
+              _recalculatePriceForVehicleType();
+              _updateMapBounds();
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('[RequestRideScreen] Error obteniendo ruta OSRM: $e');
+        }
+      }
+
+      // Fallback: línea recta si OSRM falla
       setState(() {
         _routePolyline = Polyline(
           points: [_originCoords!, _destinationCoords!],
@@ -2156,17 +2301,86 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         );
       });
 
-      final distance = const Distance();
-      final distanceInKm = distance.as(LengthUnit.Kilometer, _originCoords!, _destinationCoords!);
-      _distanceController.text = distanceInKm.toStringAsFixed(2);
-
-      final estimatedPrice = distanceInKm * 0.5;
-      if (_priceController.text.isEmpty) {
-        _priceController.text = estimatedPrice.toStringAsFixed(2);
-      }
+      // Recalcular precio
+      _recalculatePriceForVehicleType();
+      _updateMapBounds();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Error calculando ruta: $e');
+      }
+    }
+  }
+
+  /// Recalcula el precio basado en la distancia y el tipo de vehículo
+  void _recalculatePriceForVehicleType() {
+    if (_originCoords == null || _destinationCoords == null) return;
+
+    final distanceText = _distanceController.text;
+    if (distanceText.isEmpty) return;
+
+    final distanceInKm = double.tryParse(distanceText) ?? 0.0;
+    if (distanceInKm <= 0) return;
+
+    // Precios base por tipo de vehículo (por km)
+    final vehiclePrices = {
+      'sedan': 0.5,
+      'business': 0.7,
+      'van': 0.9,
+      'luxury': 1.2,
+      'minibus_8pax': 1.0,
+      'bus_16pax': 1.5,
+      'bus_19pax': 1.8,
+      'bus_50pax': 2.5,
+    };
+
+    final pricePerKm = vehiclePrices[_selectedVehicleType] ?? 0.5;
+    final calculatedPrice = distanceInKm * pricePerKm;
+
+    // Precio mínimo según tipo de vehículo
+    final minPrices = {
+      'sedan': 2.0,
+      'business': 3.0,
+      'van': 4.0,
+      'luxury': 5.0,
+      'minibus_8pax': 6.0,
+      'bus_16pax': 10.0,
+      'bus_19pax': 12.0,
+      'bus_50pax': 15.0,
+    };
+
+    final minPrice = minPrices[_selectedVehicleType] ?? 2.0;
+    final finalPrice = calculatedPrice < minPrice ? minPrice : calculatedPrice;
+
+    setState(() {
+      _priceController.text = finalPrice.toStringAsFixed(2);
+    });
+  }
+
+  /// Actualiza los límites del mapa para mostrar la ruta completa
+  void _updateMapBounds() {
+    if (_originCoords == null || _destinationCoords == null) return;
+
+    try {
+      final centerLat = (_originCoords!.latitude + _destinationCoords!.latitude) / 2;
+      final centerLon = (_originCoords!.longitude + _destinationCoords!.longitude) / 2;
+      final center = LatLng(centerLat, centerLon);
+
+      // Calcular zoom apropiado basado en la distancia
+      final distance = const Distance();
+      final distanceInKm = distance.as(LengthUnit.Kilometer, _originCoords!, _destinationCoords!);
+      double zoom = 13.0;
+      if (distanceInKm > 50) {
+        zoom = 10.0;
+      } else if (distanceInKm > 20) {
+        zoom = 11.0;
+      } else if (distanceInKm > 10) {
+        zoom = 12.0;
+      }
+
+      _mapController.move(center, zoom);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error actualizando límites del mapa: $e');
       }
     }
   }

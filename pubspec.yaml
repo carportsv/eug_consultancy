@@ -65,3 +65,5 @@ flutter:
     - lib/l10n/en.json
     - lib/l10n/it.json
     - lib/l10n/de.json
+    - assets/data/common_places.json
+    - assets/data/predefined_routes.json

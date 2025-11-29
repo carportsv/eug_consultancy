@@ -1,0 +1,165 @@
+{
+  "places": [
+    {
+      "name": "Aeroporto Napoli",
+      "display_name": "Aeroporto Napoli, Nápoles, Italia",
+      "lat": 40.8860,
+      "lon": 14.2908,
+      "type": "airport",
+      "city": "Nápoles",
+      "country": "Italia",
+      "keywords": ["aeropuerto", "airport", "napoli", "napoles", "naples"]
+    },
+    {
+      "name": "Aeroporto Malpensa",
+      "display_name": "Aeroporto Malpensa, Milán, Italia",
+      "lat": 45.6306,
+      "lon": 8.7281,
+      "type": "airport",
+      "city": "Milán",
+      "country": "Italia",
+      "keywords": ["aeropuerto", "airport", "malpensa", "milan", "milano"]
+    },
+    {
+      "name": "Aeroporto Catania Fontanarossa",
+      "display_name": "Aeroporto Catania Fontanarossa, Catania, Italia",
+      "lat": 37.4667,
+      "lon": 15.0664,
+      "type": "airport",
+      "city": "Catania",
+      "country": "Italia",
+      "keywords": ["aeropuerto", "airport", "catania", "fontanarossa"]
+    },
+    {
+      "name": "Aeroporto Palermo",
+      "display_name": "Aeroporto Palermo, Palermo, Italia",
+      "lat": 38.1818,
+      "lon": 13.0993,
+      "type": "airport",
+      "city": "Palermo",
+      "country": "Italia",
+      "keywords": ["aeropuerto", "airport", "palermo"]
+    },
+    {
+      "name": "Aeroporto Bologna",
+      "display_name": "Aeroporto Bologna, Bolonia, Italia",
+      "lat": 44.5354,
+      "lon": 11.2887,
+      "type": "airport",
+      "city": "Bolonia",
+      "country": "Italia",
+      "keywords": ["aeropuerto", "airport", "bologna", "bolonia"]
+    },
+    {
+      "name": "Aeroporto Pisa",
+      "display_name": "Aeroporto Pisa, Pisa, Italia",
+      "lat": 43.6839,
+      "lon": 10.3925,
+      "type": "airport",
+      "city": "Pisa",
+      "country": "Italia",
+      "keywords": ["aeropuerto", "airport", "pisa"]
+    },
+    {
+      "name": "Aeroporto Firenze",
+      "display_name": "Aeroporto Firenze, Florencia, Italia",
+      "lat": 43.8100,
+      "lon": 11.2050,
+      "type": "airport",
+      "city": "Florencia",
+      "country": "Italia",
+      "keywords": ["aeropuerto", "airport", "firenze", "florencia", "florence"]
+    },
+    {
+      "name": "Napoli Centro",
+      "display_name": "Napoli Centro, Nápoles, Italia",
+      "lat": 40.8518,
+      "lon": 14.2681,
+      "type": "city_center",
+      "city": "Nápoles",
+      "country": "Italia",
+      "keywords": ["centro", "center", "napoli", "napoles", "naples", "centro città"]
+    },
+    {
+      "name": "Milano Centro",
+      "display_name": "Milano Centro, Milán, Italia",
+      "lat": 45.4642,
+      "lon": 9.1900,
+      "type": "city_center",
+      "city": "Milán",
+      "country": "Italia",
+      "keywords": ["centro", "center", "milano", "milan", "centro città"]
+    },
+    {
+      "name": "Catania Centro",
+      "display_name": "Catania Centro, Catania, Italia",
+      "lat": 37.5079,
+      "lon": 15.0830,
+      "type": "city_center",
+      "city": "Catania",
+      "country": "Italia",
+      "keywords": ["centro", "center", "catania", "centro città"]
+    },
+    {
+      "name": "Palermo Centro",
+      "display_name": "Palermo Centro, Palermo, Italia",
+      "lat": 38.1157,
+      "lon": 13.3613,
+      "type": "city_center",
+      "city": "Palermo",
+      "country": "Italia",
+      "keywords": ["centro", "center", "palermo", "centro città"]
+    },
+    {
+      "name": "Bologna Centro",
+      "display_name": "Bologna Centro, Bolonia, Italia",
+      "lat": 44.4949,
+      "lon": 11.3426,
+      "type": "city_center",
+      "city": "Bolonia",
+      "country": "Italia",
+      "keywords": ["centro", "center", "bologna", "bolonia", "centro città"]
+    },
+    {
+      "name": "Firenze Centro",
+      "display_name": "Firenze Centro, Florencia, Italia",
+      "lat": 43.7696,
+      "lon": 11.2558,
+      "type": "city_center",
+      "city": "Florencia",
+      "country": "Italia",
+      "keywords": ["centro", "center", "firenze", "florencia", "florence", "centro città"]
+    },
+    {
+      "name": "Pisa Centro",
+      "display_name": "Pisa Centro, Pisa, Italia",
+      "lat": 43.7167,
+      "lon": 10.3833,
+      "type": "city_center",
+      "city": "Pisa",
+      "country": "Italia",
+      "keywords": ["centro", "center", "pisa", "centro città"]
+    },
+    {
+      "name": "Catania Taormina",
+      "display_name": "Taormina, Catania, Italia",
+      "lat": 37.8530,
+      "lon": 15.2880,
+      "type": "tourist_destination",
+      "city": "Taormina",
+      "country": "Italia",
+      "keywords": ["taormina", "catania taormina"]
+    },
+    {
+      "name": "Catania Siracusa",
+      "display_name": "Siracusa, Catania, Italia",
+      "lat": 37.0755,
+      "lon": 15.2866,
+      "type": "tourist_destination",
+      "city": "Siracusa",
+      "country": "Italia",
+      "keywords": ["siracusa", "catania siracusa", "syracuse"]
+    }
+  ]
+}
+

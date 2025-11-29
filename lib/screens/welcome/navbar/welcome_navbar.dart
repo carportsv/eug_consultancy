@@ -12,7 +12,6 @@ import 'language_selector.dart';
 // Constants (copiadas de welcome_screen.dart)
 const _kPrimaryColor = Color(0xFF1D4ED8);
 const _kTextColor = Color(0xFF1A202C);
-const _kBorderRadius = 12.0;
 
 /// Navbar para WelcomeScreen
 /// Extraída del welcome_screen.dart para mejor organización
@@ -169,172 +168,259 @@ class WelcomeNavbar extends StatelessWidget implements PreferredSizeWidget {
       actions: [
         // Si hay usuario autenticado, mostrar menú de usuario
         if (currentUser != null) ...[
-          // Menú de usuario con estilo profesional
+          // Menú de usuario con estilo profesional mejorado
           PopupMenuButton<String>(
             offset: const Offset(0, 50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_kBorderRadius)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             color: Colors.white,
-            elevation: 8,
-            shadowColor: Colors.black.withValues(alpha: 0.2),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            elevation: 12,
+            shadowColor: Colors.black.withValues(alpha: 0.15),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Foto de perfil o icono
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
-                    backgroundImage: currentUser!.photoURL != null
-                        ? NetworkImage(currentUser!.photoURL!)
-                        : null,
-                    onBackgroundImageError: (exception, stackTrace) {
-                      // Manejar errores de carga de imagen silenciosamente
-                      // El fallback (child) se mostrará automáticamente
-                    },
-                    child: currentUser!.photoURL == null
-                        ? const Icon(Icons.person, color: Colors.white, size: 20)
-                        : null,
-                  ),
-                  const SizedBox(width: 8),
-                  // Nombre del usuario
-                  Text(
-                    currentUser!.displayName ?? currentUser!.email?.split('@').first ?? 'Usuario',
-                    style: GoogleFonts.exo(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                  // Foto de perfil o icono con borde
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 20),
-                ],
-              ),
-            ),
-            itemBuilder: (BuildContext context) => [
-              // Información del usuario
-              PopupMenuItem<String>(
-                enabled: false,
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: _kPrimaryColor.withValues(alpha: 0.1),
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
                       backgroundImage: currentUser!.photoURL != null
                           ? NetworkImage(currentUser!.photoURL!)
                           : null,
                       onBackgroundImageError: (exception, stackTrace) {
                         // Manejar errores de carga de imagen silenciosamente
-                        // El fallback (child) se mostrará automáticamente
                       },
                       child: currentUser!.photoURL == null
-                          ? Icon(Icons.person, color: _kPrimaryColor, size: 24)
+                          ? const Icon(Icons.person, color: Colors.white, size: 20)
                           : null,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            currentUser!.displayName ??
-                                currentUser!.email?.split('@').first ??
-                                'Usuario',
-                            style: GoogleFonts.exo(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: _kTextColor,
+                  ),
+                  const SizedBox(width: 10),
+                  // Nombre del usuario
+                  Text(
+                    currentUser!.displayName ?? currentUser!.email?.split('@').first ?? 'Usuario',
+                    style: GoogleFonts.exo(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+            itemBuilder: (BuildContext context) => [
+              // Header con información del usuario - mejorado
+              PopupMenuItem<String>(
+                enabled: false,
+                padding: EdgeInsets.zero,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        _kPrimaryColor.withValues(alpha: 0.05),
+                        _kPrimaryColor.withValues(alpha: 0.02),
+                      ],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      // Avatar más grande con sombra
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: _kPrimaryColor.withValues(alpha: 0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (currentUser!.email != null) ...[
-                            const SizedBox(height: 4),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          radius: 32,
+                          backgroundColor: _kPrimaryColor.withValues(alpha: 0.1),
+                          backgroundImage: currentUser!.photoURL != null
+                              ? NetworkImage(currentUser!.photoURL!)
+                              : null,
+                          onBackgroundImageError: (exception, stackTrace) {},
+                          child: currentUser!.photoURL == null
+                              ? Icon(Icons.person, color: _kPrimaryColor, size: 32)
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              currentUser!.email!,
-                              style: GoogleFonts.exo(fontSize: 12, color: Colors.grey.shade600),
+                              currentUser!.displayName ??
+                                  currentUser!.email?.split('@').first ??
+                                  'Usuario',
+                              style: GoogleFonts.exo(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: _kTextColor,
+                                letterSpacing: 0.2,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                            if (currentUser!.email != null) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(Icons.email_outlined, size: 14, color: Colors.grey.shade500),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      currentUser!.email!,
+                                      style: GoogleFonts.exo(
+                                        fontSize: 13,
+                                        color: Colors.grey.shade600,
+                                        letterSpacing: 0.1,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
+              // Separador elegante
               PopupMenuDivider(height: 1, color: Colors.grey.shade200),
-              // Opción Perfil
+              // Opción Perfil - mejorada
               PopupMenuItem<String>(
                 value: 'profile',
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: _kPrimaryColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.person, color: _kPrimaryColor, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        Builder(
-                          builder: (context) {
-                            final l10n = AppLocalizations.of(context);
-                            return Text(
-                              l10n?.myProfile ?? 'Mi Perfil',
-                              style: GoogleFonts.exo(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: _kTextColor,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      Navigator.pop(context);
+                      onNavigateToProfile();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  _kPrimaryColor.withValues(alpha: 0.15),
+                                  _kPrimaryColor.withValues(alpha: 0.08),
+                                ],
                               ),
-                            );
-                          },
-                        ),
-                      ],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.person_outline, color: _kPrimaryColor, size: 22),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Builder(
+                              builder: (context) {
+                                final l10n = AppLocalizations.of(context);
+                                return Text(
+                                  l10n?.myProfile ?? 'Mi Perfil',
+                                  style: GoogleFonts.exo(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: _kTextColor,
+                                    letterSpacing: 0.2,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-              // Opción Cerrar sesión
+              // Opción Cerrar sesión - mejorada
               PopupMenuItem<String>(
                 value: 'logout',
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.logout, color: Colors.red.shade600, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        Builder(
-                          builder: (context) {
-                            final l10n = AppLocalizations.of(context);
-                            return Text(
-                              l10n?.logout ?? 'Cerrar sesión',
-                              style: GoogleFonts.exo(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.red.shade600,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      Navigator.pop(context);
+                      onHandleLogout();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.red.shade50,
+                                  Colors.red.shade50.withValues(alpha: 0.5),
+                                ],
                               ),
-                            );
-                          },
-                        ),
-                      ],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.logout_rounded, color: Colors.red.shade600, size: 22),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Builder(
+                              builder: (context) {
+                                final l10n = AppLocalizations.of(context);
+                                return Text(
+                                  l10n?.logout ?? 'Cerrar sesión',
+                                  style: GoogleFonts.exo(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.red.shade600,
+                                    letterSpacing: 0.2,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
+                        ],
+                      ),
                     ),
                   ),
                 ),
