@@ -9,6 +9,7 @@ import 'firebase_options.dart';
 import 'user_service.dart';
 import '../screens/admin/admin_home_screen.dart';
 import '../screens/welcome/welcome/welcome_screen.dart';
+import '../screens/welcome/carousel/background/background_carousel.dart';
 
 // Importar funciones JS interop condicionalmente
 // En web: usa js_interop_web.dart con dart:js_interop
@@ -30,10 +31,12 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   final UserService _userService = UserService();
   StreamSubscription<User?>? _authSubscription;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   Future<Map<String, dynamic>> _firebaseAuthSignInWithGoogleWeb(Map<String, String> config) async {
     if (!kIsWeb) {
@@ -132,6 +135,15 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    // Inicializar animación de pulso
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(
+      begin: 0.85,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
     // Escuchar cambios de autenticación para navegar automáticamente
     // Esto es especialmente importante después de logout/login
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) async {
@@ -181,6 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -411,109 +424,237 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_kPrimaryColor, _kPrimaryColor.withValues(alpha: 0.8)],
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Carrusel de imágenes de fondo (igual que welcome)
+          Positioned.fill(child: const BackgroundCarousel()),
+          // Overlay oscuro con gradiente
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFF1C1C1C).withValues(alpha: 0.4),
+                  const Color(0xFF000000).withValues(alpha: 0.5),
+                ],
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: _kSpacing * 2),
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Card(
-                  elevation: 0,
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
+          // Contenedor principal con glassmorphism
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: _kSpacing * 2),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 450),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(_kBorderRadius * 2),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                        spreadRadius: 5,
+                      ),
+                    ],
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(_kSpacing * 3),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Logo o ícono decorativo
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: _kPrimaryColor.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
+                  padding: const EdgeInsets.all(_kSpacing * 3),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Logo o ícono decorativo con gradiente
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _kPrimaryColor.withValues(alpha: 0.2),
+                              _kPrimaryColor.withValues(alpha: 0.1),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          child: Icon(Icons.local_taxi, size: 40, color: _kPrimaryColor),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _kPrimaryColor.withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: _kSpacing * 2),
+                        child: Icon(Icons.local_taxi, size: 50, color: Colors.white),
+                      ),
+                      const SizedBox(height: _kSpacing * 2.5),
 
-                        // Título removido
-                        const SizedBox(height: _kSpacing),
-
-                        // Subtítulo
-                        Text(
-                          'Inicia sesión para continuar',
-                          style: GoogleFonts.exo(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
-                            height: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
+                      // Título
+                      Text(
+                        'Bienvenido',
+                        style: GoogleFonts.exo(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
                         ),
-                        const SizedBox(height: _kSpacing * 3),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: _kSpacing),
 
-                        // Botón de Google
-                        _isLoading
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                child: const CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(_kPrimaryColor),
-                                ),
-                              )
-                            : SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: _signInWithGoogle,
-                                  icon: Image.asset(
+                      // Subtítulo
+                      Text(
+                        'Inicia sesión para continuar',
+                        style: GoogleFonts.exo(
+                          fontSize: 16,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          height: 1.5,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: _kSpacing * 3),
+
+                      // Botón de Google con estilo glassmorphism
+                      _isLoading
+                          ? const SizedBox.shrink()
+                          : Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(_kBorderRadius),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: _kPrimaryColor.withValues(alpha: 0.4),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 5),
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: ElevatedButton.icon(
+                                onPressed: _signInWithGoogle,
+                                icon: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Image.asset(
                                     'assets/images/google_sig.png',
-                                    height: 24,
-                                    width: 24,
+                                    height: 20,
+                                    width: 20,
                                     errorBuilder: (context, error, stackTrace) {
-                                      return Icon(Icons.login, color: Colors.white, size: 24);
+                                      return Icon(Icons.login, color: Colors.white, size: 20);
                                     },
                                   ),
-                                  label: Text(
-                                    'Iniciar sesión con Google',
-                                    style: GoogleFonts.exo(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _kPrimaryColor,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 18,
-                                      horizontal: 24,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(_kBorderRadius),
-                                    ),
-                                    elevation: 3,
-                                    shadowColor: _kPrimaryColor.withValues(alpha: 0.4),
+                                ),
+                                label: Text(
+                                  'Iniciar sesión con Google',
+                                  style: GoogleFonts.exo(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: 0.3,
                                   ),
                                 ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _kPrimaryColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(_kBorderRadius),
+                                  ),
+                                  elevation: 0,
+                                ),
                               ),
-                      ],
-                    ),
+                            ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
-        ),
+          // Overlay de carga con logo_21 cuando está cargando
+          if (_isLoading)
+            Container(
+              color: Colors.black.withValues(alpha: 0.8),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Logo con animación de pulso continua
+                    AnimatedBuilder(
+                      animation: _pulseAnimation,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _pulseAnimation.value,
+                          child: Container(
+                            width: 200,
+                            height: 200,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.4),
+                                width: 3,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _kPrimaryColor.withValues(alpha: 0.6),
+                                  blurRadius: 40,
+                                  spreadRadius: 10,
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Image.asset(
+                                'assets/images/logo_21.png',
+                                width: 150,
+                                height: 150,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(Icons.local_taxi, size: 100, color: Colors.white);
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: _kSpacing * 2.5),
+                    // Texto de carga
+                    Text(
+                      'Iniciando sesión...',
+                      style: GoogleFonts.exo(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: _kSpacing * 1.5),
+                    // Indicador de progreso
+                    SizedBox(
+                      width: 250,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          valueColor: AlwaysStoppedAnimation<Color>(_kPrimaryColor),
+                          minHeight: 4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

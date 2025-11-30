@@ -5,7 +5,6 @@ import 'location_input_field.dart';
 import 'date_field.dart';
 import 'time_field.dart';
 import 'passengers_field.dart';
-import 'info_field.dart';
 
 // Constants
 const _kBorderRadius = 12.0;
@@ -33,10 +32,12 @@ class WelcomeFormSection extends StatelessWidget {
   final double? estimatedPrice;
   final String selectedVehicleType;
   final Function(String) onVehicleTypeChanged;
+  final bool isGeocoding; // Estado de carga para geocodificación
 
   // Callbacks
   final Function(String, String) onAddressInputChanged;
   final Function(Map<String, dynamic>, String) onSelectAddress;
+  final Function(String, String)? onGeocodeAddress; // Callback opcional para geocodificar
   final VoidCallback onSelectPickupDate;
   final VoidCallback onSelectPickupTime;
   final Function(int) onPassengersChanged;
@@ -60,8 +61,10 @@ class WelcomeFormSection extends StatelessWidget {
     required this.estimatedPrice,
     required this.selectedVehicleType,
     required this.onVehicleTypeChanged,
+    this.isGeocoding = false,
     required this.onAddressInputChanged,
     required this.onSelectAddress,
+    this.onGeocodeAddress,
     required this.onSelectPickupDate,
     required this.onSelectPickupTime,
     required this.onPassengersChanged,
@@ -89,6 +92,7 @@ class WelcomeFormSection extends StatelessWidget {
               autocompleteResults: autocompleteResults,
               onAddressInputChanged: onAddressInputChanged,
               onSelectAddress: onSelectAddress,
+              onGeocodeAddress: onGeocodeAddress,
             );
           },
         ),
@@ -108,6 +112,7 @@ class WelcomeFormSection extends StatelessWidget {
               autocompleteResults: autocompleteResults,
               onAddressInputChanged: onAddressInputChanged,
               onSelectAddress: onSelectAddress,
+              onGeocodeAddress: onGeocodeAddress,
             );
           },
         ),
@@ -139,37 +144,11 @@ class WelcomeFormSection extends StatelessWidget {
         _buildVehicleSelection(),
         const SizedBox(height: _kSpacing * 2),
 
-        // Campos de distancia y precio (si están disponibles)
-        if (distanceKm != null || estimatedPrice != null) ...[
-          Row(
-            children: [
-              if (distanceKm != null)
-                Expanded(
-                  child: InfoField(
-                    label: 'Distancia',
-                    value: '${distanceKm!.toStringAsFixed(2)} km',
-                    icon: Icons.straighten,
-                  ),
-                ),
-              if (distanceKm != null && estimatedPrice != null) const SizedBox(width: _kSpacing),
-              if (estimatedPrice != null)
-                Expanded(
-                  child: InfoField(
-                    label: 'Precio estimado',
-                    value: '\$${estimatedPrice!.toStringAsFixed(2)}',
-                    icon: Icons.attach_money,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: _kSpacing * 2),
-        ],
-
         // Botón Ver precios
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: onNavigateToRequestRide,
+            onPressed: isGeocoding ? null : onNavigateToRequestRide,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white.withValues(alpha: 0.2), // Semi-transparente
               foregroundColor: Colors.white, // Texto blanco
@@ -184,6 +163,26 @@ class WelcomeFormSection extends StatelessWidget {
             ),
             child: Builder(
               builder: (context) {
+                if (isGeocoding) {
+                  return const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Buscando direcciones...',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  );
+                }
                 final l10n = AppLocalizations.of(context);
                 final seePricesText = (l10n != null && !l10n.seePrices.startsWith('form.'))
                     ? l10n.seePrices

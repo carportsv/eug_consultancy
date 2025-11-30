@@ -20,7 +20,12 @@ class AutocompleteItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = result['display_name'] as String;
+    final displayName = result['display_name'] as String? ?? '';
+
+    // Debug: verificar que displayName no esté vacío
+    if (displayName.isEmpty) {
+      debugPrint('[AutocompleteItem] ⚠️ display_name está vacío para resultado: $result');
+    }
 
     return InkWell(
       onTap: onTap,

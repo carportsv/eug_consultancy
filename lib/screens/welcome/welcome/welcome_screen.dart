@@ -66,6 +66,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   // Tipo de vehículo seleccionado
   String _selectedVehicleType = 'sedan'; // sedan, business, van, luxury
 
+  // Estado de carga para geocodificación
+  bool _isGeocoding = false;
+
   // Lista de vehículos - ahora se obtiene de VehicleData
   List<Map<String, dynamic>> get _vehicles => VehicleData.vehicles;
 
@@ -131,15 +134,30 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     }
 
     // Agregar listeners a los FocusNodes para activar el campo cuando recibe focus
+    // y geocodificar cuando pierde el foco
     _pickupFocusNode.addListener(() {
       if (_pickupFocusNode.hasFocus) {
         _onAddressInputChanged('', 'pickup');
+      } else {
+        // Si el campo pierde el foco y hay texto, pero no hay coordenadas, intentar geocodificar
+        if (_pickupController.text.trim().isNotEmpty) {
+          if (_originCoords == null && _pickupController.text.trim().length >= 3) {
+            _geocodeAddress(_pickupController.text.trim(), 'pickup');
+          }
+        }
       }
     });
 
     _dropoffFocusNode.addListener(() {
       if (_dropoffFocusNode.hasFocus) {
         _onAddressInputChanged('', 'dropoff');
+      } else {
+        // Si el campo pierde el foco y hay texto, pero no hay coordenadas, intentar geocodificar
+        if (_dropoffController.text.trim().isNotEmpty) {
+          if (_destinationCoords == null && _dropoffController.text.trim().length >= 3) {
+            _geocodeAddress(_dropoffController.text.trim(), 'dropoff');
+          }
+        }
       }
     });
   }
@@ -221,7 +239,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     ).showSnackBar(const SnackBar(content: Text('Mi perfil (próximamente)')));
   }
 
-  void _navigateToRequestRide() {
+  Future<void> _navigateToRequestRide() async {
     // Verificar si Firebase está inicializado antes de acceder
     bool firebaseInitialized = false;
     try {
@@ -261,21 +279,45 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       showDialog(
         context: context,
         barrierDismissible: true,
+        barrierColor: Colors.black.withValues(alpha: 0.5),
         builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_kBorderRadius * 2)),
           child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.95),
+              borderRadius: BorderRadius.circular(_kBorderRadius * 2),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
             padding: const EdgeInsets.all(_kSpacing * 2),
             constraints: const BoxConstraints(maxWidth: 400),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Icono decorativo
+                // Icono decorativo con gradiente
                 Container(
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: _kPrimaryColor.withValues(alpha: 0.1),
+                    gradient: LinearGradient(
+                      colors: [
+                        _kPrimaryColor.withValues(alpha: 0.15),
+                        _kPrimaryColor.withValues(alpha: 0.05),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     shape: BoxShape.circle,
+                    border: Border.all(color: _kPrimaryColor.withValues(alpha: 0.2), width: 2),
                   ),
                   child: Icon(Icons.person_add_alt_1, size: 40, color: _kPrimaryColor),
                 ),
@@ -288,9 +330,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     return Text(
                       l10n?.accountRequired ?? 'Cuenta requerida',
                       style: GoogleFonts.exo(
-                        fontSize: 24,
+                        fontSize: 26,
                         fontWeight: FontWeight.bold,
                         color: _kTextColor,
+                        letterSpacing: -0.5,
                       ),
                       textAlign: TextAlign.center,
                     );
@@ -304,11 +347,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     final l10n = AppLocalizations.of(context);
                     return Text(
                       l10n?.accountRequiredMessage ??
-                          'Necesitas crear una cuenta para solicitar viajes. ¿Deseas crear una cuenta ahora?',
+                          'Necesitas iniciar sesión o crear una cuenta para solicitar viajes.',
                       style: GoogleFonts.exo(
-                        fontSize: 16,
+                        fontSize: 15,
                         color: Colors.grey.shade700,
-                        height: 1.5,
+                        height: 1.6,
+                        fontWeight: FontWeight.w400,
                       ),
                       textAlign: TextAlign.center,
                     );
@@ -329,6 +373,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(_kBorderRadius),
                           ),
+                          backgroundColor: Colors.white.withValues(alpha: 0.5),
                         ),
                         child: Builder(
                           builder: (context) {
@@ -346,7 +391,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                     ),
                     const SizedBox(width: _kSpacing),
-                    // Botón crear cuenta
+                    // Botón iniciar sesión / crear cuenta
                     Expanded(
                       flex: 2,
                       child: ElevatedButton(
@@ -358,7 +403,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           backgroundColor: _kPrimaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 2,
+                          elevation: 4,
+                          shadowColor: _kPrimaryColor.withValues(alpha: 0.4),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(_kBorderRadius),
                           ),
@@ -366,9 +412,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         child: Builder(
                           builder: (context) {
                             final l10n = AppLocalizations.of(context);
+                            final text = l10n != null
+                                ? (l10n.loginOrCreateAccount.isNotEmpty &&
+                                          l10n.loginOrCreateAccount != 'form.loginOrCreateAccount'
+                                      ? l10n.loginOrCreateAccount
+                                      : 'Iniciar sesión / Crear cuenta')
+                                : 'Iniciar sesión / Crear cuenta';
                             return Text(
-                              l10n?.createAccount ?? 'Crear cuenta',
-                              style: GoogleFonts.exo(fontSize: 16, fontWeight: FontWeight.bold),
+                              text,
+                              style: GoogleFonts.exo(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.2,
+                              ),
+                              textAlign: TextAlign.center,
                             );
                           },
                         ),
@@ -382,28 +439,103 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         ),
       );
     } else {
-      // Si está autenticado, ir directamente a solicitar viaje
-      // Pasar los valores de origen, destino, fecha, hora, pasajeros y precio estimado si existen
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => RequestRideScreen(
-            initialOrigin: _pickupController.text.trim().isNotEmpty
-                ? _pickupController.text.trim()
-                : null,
-            initialDestination: _dropoffController.text.trim().isNotEmpty
-                ? _dropoffController.text.trim()
-                : null,
-            initialDate: _pickupDate,
-            initialTime: _parseTimeFromText(_timeController.text),
-            initialPassengers: _passengers,
-            initialEstimatedPrice: _estimatedPrice,
-            initialOriginCoords: _originCoords,
-            initialDestinationCoords: _destinationCoords,
-            initialVehicleType: _selectedVehicleType,
+      // Si está autenticado, verificar si necesitamos geocodificar antes de navegar
+      final pickupText = _pickupController.text.trim();
+      final dropoffText = _dropoffController.text.trim();
+      bool needsGeocoding = false;
+
+      // Verificar si hay texto pero no coordenadas
+      if (pickupText.isNotEmpty && _originCoords == null) {
+        needsGeocoding = true;
+        if (kDebugMode) {
+          debugPrint('[WelcomeScreen] 🔍 Necesita geocodificar origen: "$pickupText"');
+        }
+      }
+      if (dropoffText.isNotEmpty && _destinationCoords == null) {
+        needsGeocoding = true;
+        if (kDebugMode) {
+          debugPrint('[WelcomeScreen] 🔍 Necesita geocodificar destino: "$dropoffText"');
+        }
+      }
+
+      // Si necesita geocodificar, hacerlo antes de navegar
+      if (needsGeocoding) {
+        setState(() {
+          _isGeocoding = true;
+        });
+
+        try {
+          // Geocodificar origen si es necesario (modo silencioso para no mostrar múltiples mensajes)
+          if (pickupText.isNotEmpty && _originCoords == null) {
+            if (kDebugMode) {
+              debugPrint('[WelcomeScreen] 🔍 Geocodificando origen antes de navegar...');
+            }
+            await _geocodeAddress(pickupText, 'pickup', silent: true);
+            // Esperar un poco para que se actualice el estado
+            await Future.delayed(const Duration(milliseconds: 100));
+          }
+
+          // Geocodificar destino si es necesario (modo silencioso para no mostrar múltiples mensajes)
+          if (dropoffText.isNotEmpty && _destinationCoords == null) {
+            if (kDebugMode) {
+              debugPrint('[WelcomeScreen] 🔍 Geocodificando destino antes de navegar...');
+            }
+            await _geocodeAddress(dropoffText, 'dropoff', silent: true);
+            // Esperar un poco para que se actualice el estado
+            await Future.delayed(const Duration(milliseconds: 100));
+          }
+
+          // Recalcular distancia y precio si ahora tenemos ambas coordenadas
+          if (_originCoords != null && _destinationCoords != null) {
+            await _calculateDistanceAndPrice();
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('[WelcomeScreen] ❌ Error geocodificando antes de navegar: $e');
+          }
+          // Continuar navegando aunque haya error, pero mostrar mensaje
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Algunas direcciones no pudieron ser geocodificadas. El mapa puede no mostrar la ruta completa.',
+                ),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isGeocoding = false;
+            });
+          }
+        }
+      }
+
+      // Navegar a solicitar viaje con los valores actualizados
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => RequestRideScreen(
+              initialOrigin: _pickupController.text.trim().isNotEmpty
+                  ? _pickupController.text.trim()
+                  : null,
+              initialDestination: _dropoffController.text.trim().isNotEmpty
+                  ? _dropoffController.text.trim()
+                  : null,
+              initialDate: _pickupDate,
+              initialTime: _parseTimeFromText(_timeController.text),
+              initialPassengers: _passengers,
+              initialEstimatedPrice: _estimatedPrice,
+              initialDistanceKm: _distanceKm,
+              initialOriginCoords: _originCoords,
+              initialDestinationCoords: _destinationCoords,
+              initialVehicleType: _selectedVehicleType,
+            ),
           ),
-          settings: const RouteSettings(name: '/request-ride'),
-        ),
-      );
+        );
+      }
     }
   }
 
@@ -581,6 +713,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       distanceKm: _distanceKm,
       estimatedPrice: _estimatedPrice,
       selectedVehicleType: _selectedVehicleType,
+      isGeocoding: _isGeocoding,
       onVehicleTypeChanged: (vehicleType) {
         setState(() {
           _selectedVehicleType = vehicleType;
@@ -592,6 +725,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       },
       onAddressInputChanged: _onAddressInputChanged,
       onSelectAddress: _selectAddressFromAutocomplete,
+      onGeocodeAddress: _geocodeAddress,
       onSelectPickupDate: _selectPickupDate,
       onSelectPickupTime: _selectPickupTime,
       onPassengersChanged: (value) => setState(() => _passengers = value),
@@ -785,21 +919,89 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   void _selectAddressFromAutocomplete(Map<String, dynamic> result, String type) {
-    final address = result['display_name'] as String;
-    final lat = result['lat'] as double;
-    final lon = result['lon'] as double;
+    final address = result['display_name'] as String? ?? '';
+
+    // Extraer coordenadas de forma segura (pueden venir como double, num, o String)
+    final latValue = result['lat'];
+    final lonValue = result['lon'];
+
+    double? lat;
+    double? lon;
+
+    if (latValue is double) {
+      lat = latValue;
+    } else if (latValue is num) {
+      lat = latValue.toDouble();
+    } else if (latValue is String) {
+      lat = double.tryParse(latValue);
+    }
+
+    if (lonValue is double) {
+      lon = lonValue;
+    } else if (lonValue is num) {
+      lon = lonValue.toDouble();
+    } else if (lonValue is String) {
+      lon = double.tryParse(lonValue);
+    }
+
+    if (lat == null || lon == null || lat == 0.0 || lon == 0.0) {
+      if (kDebugMode) {
+        debugPrint('[WelcomeScreen] ⚠️ Coordenadas inválidas: lat=$latValue, lon=$lonValue');
+      }
+      return;
+    }
+
+    if (kDebugMode) {
+      debugPrint('[WelcomeScreen] ✅ Seleccionando dirección: $address');
+      debugPrint('[WelcomeScreen] Coordenadas: lat=$lat, lon=$lon');
+    }
+
+    final point = LatLng(lat, lon);
+
+    // Obtener el texto actual del usuario antes de reemplazarlo
+    final currentText = type == 'pickup' ? _pickupController.text : _dropoffController.text;
+
+    // Si el usuario escribió una dirección más completa o detallada que el display_name,
+    // mantener su texto original. Esto preserva el formato que el usuario escribió.
+    final userTextLower = currentText.toLowerCase().trim();
+    final displayNameLower = address.toLowerCase().trim();
+
+    // Comparar si el texto del usuario contiene información más específica
+    // Si el texto del usuario es significativamente más largo o contiene más detalles,
+    // mantenerlo. De lo contrario, usar el display_name de la API.
+    bool shouldKeepUserText = false;
+
+    if (userTextLower.length > displayNameLower.length * 1.2) {
+      // El texto del usuario es significativamente más largo
+      shouldKeepUserText = true;
+    } else if (userTextLower.length > 30 &&
+        displayNameLower.contains(userTextLower.substring(0, 20))) {
+      // El texto del usuario es largo y el display_name contiene el inicio del texto del usuario
+      shouldKeepUserText = true;
+    } else if (userTextLower.split(' ').length > displayNameLower.split(' ').length + 2) {
+      // El texto del usuario tiene significativamente más palabras
+      shouldKeepUserText = true;
+    }
+
+    final finalAddress = shouldKeepUserText ? currentText : address;
 
     if (type == 'pickup') {
-      _pickupController.text = address;
+      _pickupController.text = finalAddress;
       _pickupFocusNode.unfocus();
-      if (lat != 0.0 && lon != 0.0) {
-        _originCoords = LatLng(lat, lon);
+      _originCoords = point;
+      if (kDebugMode) {
+        debugPrint(
+          '[WelcomeScreen] ✅ Origen actualizado: ${_originCoords?.latitude}, ${_originCoords?.longitude}',
+        );
       }
     } else {
-      _dropoffController.text = address;
+      _dropoffController.text = finalAddress;
       _dropoffFocusNode.unfocus();
-      if (lat != 0.0 && lon != 0.0) {
-        _destinationCoords = LatLng(lat, lon);
+      _destinationCoords = point;
+      if (kDebugMode) {
+        debugPrint(
+          '[WelcomeScreen] ✅ Destino actualizado: ${_destinationCoords?.latitude}, ${_destinationCoords?.longitude}',
+        );
       }
     }
 
@@ -811,6 +1013,59 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     // Calcular distancia y precio si ambas coordenadas están disponibles
     if (_originCoords != null && _destinationCoords != null) {
       _calculateDistanceAndPrice();
+    }
+  }
+
+  Future<void> _geocodeAddress(String address, String type, {bool silent = false}) async {
+    if (address.trim().length < 3) return;
+
+    if (kDebugMode) {
+      debugPrint(
+        '[WelcomeScreen] 🔍 Geocodificando dirección: "$address" (type: $type, silent: $silent)',
+      );
+    }
+
+    try {
+      // Usar el servicio de autocompletado para buscar la dirección
+      final results = await AddressAutocompleteService.searchAddresses(address);
+
+      if (results.isNotEmpty) {
+        // Tomar el primer resultado (el más relevante)
+        final result = results[0];
+        if (kDebugMode) {
+          debugPrint('[WelcomeScreen] ✅ Dirección geocodificada: ${result['display_name']}');
+        }
+        // Seleccionar automáticamente el primer resultado
+        _selectAddressFromAutocomplete(result, type);
+      } else {
+        if (kDebugMode) {
+          debugPrint('[WelcomeScreen] ⚠️ No se encontraron resultados para: "$address"');
+        }
+        // Solo mostrar mensaje si no es modo silencioso
+        if (!silent && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No se pudo encontrar la dirección: $address'),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[WelcomeScreen] ❌ Error geocodificando dirección: $e');
+      }
+      // Solo mostrar mensaje si no es modo silencioso
+      if (!silent && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al buscar la dirección: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      // Re-lanzar el error para que el llamador pueda manejarlo
+      rethrow;
     }
   }
 

@@ -100,6 +100,7 @@ class AppLocalizations {
   String get destinationPlaceholder => translate('form.destinationPlaceholder');
   String get timePlaceholder => translate('form.timePlaceholder');
   String get createAccount => translate('form.createAccount');
+  String get loginOrCreateAccount => translate('form.loginOrCreateAccount');
   String get accountRequiredMessage => translate('form.accountRequiredMessage');
 }
 

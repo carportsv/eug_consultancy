@@ -32,14 +32,344 @@
   <title>fzkt_openstreet</title>
   <link rel="manifest" href="manifest.json">
   
+  <!-- Preload splash image -->
+  <link rel="preload" as="image" href="logo_21.png" />
+  
   <!-- Firebase JS SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   
   <!-- Firebase Auth Helper para Google Sign-In en web -->
   <script src="firebase_auth_helper.js"></script>
+  
+  <!-- Splash Screen Styles -->
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      transition: opacity 0.5s ease-out;
+      margin: 0;
+      padding: 0;
+    }
+    
+    #splash-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    #splash-screen img {
+      max-width: 300px;
+      max-height: 300px;
+      width: auto;
+      height: auto;
+      animation: pulse 2s ease-in-out infinite;
+      display: block;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.8;
+        transform: scale(0.98);
+      }
+    }
+    
+    /* Ocultar splash cuando Flutter esté listo */
+    .flutter-ready #splash-screen {
+      display: none !important;
+    }
+  </style>
 </head>
 <body>
+  <!-- Splash Screen - Mostrar inmediatamente -->
+  <div id="splash-screen" style="display: flex !important; visibility: visible !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #ffffff; z-index: 99999; justify-content: center; align-items: center;">
+    <img id="splash-img" src="logo_21.png" alt="Loading..." style="max-width: 300px; max-height: 300px; width: auto; height: auto;" />
+  </div>
+  
+  <script>
+    // Asegurar que la splash se muestre inmediatamente
+    (function() {
+      const splash = document.getElementById('splash-screen');
+      const img = document.getElementById('splash-img');
+      
+      if (splash) {
+        splash.style.display = 'flex';
+        splash.style.visibility = 'visible';
+        splash.style.opacity = '1';
+      }
+      
+      // Manejar carga y errores de la imagen
+      if (img) {
+        let currentPathIndex = 0;
+        const altPaths = ['logo_21.png', './logo_21.png', '/logo_21.png', 'assets/images/logo_21.png'];
+        
+        img.onload = function() {
+          console.log('✅ Splash image loaded successfully');
+        };
+        
+        img.onerror = function() {
+          console.warn('⚠️ Error loading splash image, trying alternative path:', altPaths[currentPathIndex]);
+          currentPathIndex++;
+          
+          if (currentPathIndex < altPaths.length) {
+            img.src = altPaths[currentPathIndex];
+          } else {
+            // Si ninguna ruta funciona, mostrar texto
+            console.error('❌ Could not load splash image from any path');
+            img.style.display = 'none';
+            const div = document.createElement('div');
+            div.style.cssText = 'font-size: 24px; color: #1D4ED8; font-weight: bold; text-align: center;';
+            div.textContent = 'Cargando...';
+            if (splash) {
+              splash.appendChild(div);
+            }
+          }
+        };
+      }
+    })();
+    
+    let appReady = false;
+    let hideTimeout = null;
+    let checkInterval = null;
+    let flutterLoadingCheck = null;
+    let firstFrameReceived = false;
+    
+    // Función para ocultar la splash screen
+    function hideSplash() {
+      if (appReady) return; // Ya se ocultó
+      
+      // Limpiar timeouts e intervalos
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+        hideTimeout = null;
+      }
+      if (checkInterval) {
+        clearInterval(checkInterval);
+        checkInterval = null;
+      }
+      if (flutterLoadingCheck) {
+        clearInterval(flutterLoadingCheck);
+        flutterLoadingCheck = null;
+      }
+      
+      const splash = document.getElementById('splash-screen');
+      if (splash && splash.style.display !== 'none') {
+        appReady = true;
+        splash.classList.add('fade-out');
+        setTimeout(function() {
+          splash.style.display = 'none';
+          document.body.classList.add('flutter-ready');
+        }, 300);
+      }
+    }
+    
+    // Función para verificar si WelcomeScreen está completamente renderizado y visible
+    let readyChecks = 0;
+    const requiredReadyChecks = 8; // Requerir 8 verificaciones consecutivas (800ms de estabilidad)
+    let firstReadyTime = 0;
+    
+    function isWelcomeScreenReady() {
+      const canvas = document.querySelector('canvas');
+      const flutterHost = document.querySelector('flt-scene-host');
+      
+      // Verificar que el canvas tenga contenido visible y esté renderizado
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        // Verificar que el canvas tenga un tamaño razonable (más de 200px indica contenido real)
+        if (rect.width > 200 && rect.height > 200 && 
+            canvas.width > 200 && canvas.height > 200) {
+          return true;
+        }
+      }
+      
+      // Verificar que flutterHost tenga contenido y esté visible
+      if (flutterHost && flutterHost.children.length > 0) {
+        const rect = flutterHost.getBoundingClientRect();
+        if (rect.width > 200 && rect.height > 200) {
+          return true;
+        }
+      }
+      
+      return false;
+    }
+    
+    // Función para verificar si las imágenes de WelcomeScreen están cargadas
+    function areWelcomeScreenImagesLoaded() {
+      const images = document.querySelectorAll('img');
+      let totalImages = 0;
+      let loadedImages = 0;
+      
+      images.forEach(function(img) {
+        // Solo contar imágenes que no sean la splash y que sean de assets
+        // Las rutas ahora son: images/cars/ o images/background/
+        if (img.id !== 'splash-img' && 
+            img.src && 
+            !img.src.includes('logo_21') &&
+            (img.src.includes('cars/') || img.src.includes('background/'))) {
+          totalImages++;
+          // Verificar si la imagen está completamente cargada
+          if (img.complete && img.naturalHeight > 0 && img.naturalWidth > 0) {
+            loadedImages++;
+          }
+        }
+      });
+      
+      // Si no hay imágenes aún, no bloquear (puede que aún no se hayan creado)
+      if (totalImages === 0) {
+        return false; // Aún no hay imágenes, seguir esperando
+      }
+      
+      // Requerir que al menos 1 imagen esté cargada (más flexible)
+      // O al menos el 40% si hay muchas imágenes
+      const minRequired = Math.max(1, Math.ceil(totalImages * 0.4));
+      return loadedImages >= minRequired;
+    }
+    
+    // Función para verificar si WelcomeScreen está completamente renderizado
+    // NO verifica imágenes - solo verifica que el contenido esté visible
+    function isWelcomeScreenFullyReady() {
+      const canvas = document.querySelector('canvas');
+      
+      if (!canvas) return false;
+      
+      const rect = canvas.getBoundingClientRect();
+      // Verificar que el canvas tenga un tamaño razonable (más permisivo)
+      if (rect.width < 100 || rect.height < 100) {
+        return false;
+      }
+      
+      // Verificar que haya contenido renderizado (no solo un canvas vacío)
+      // Buscar elementos de Flutter que indiquen que el contenido está renderizado
+      const flutterHost = document.querySelector('flt-scene-host');
+      if (flutterHost && flutterHost.children.length > 0) {
+        const hostRect = flutterHost.getBoundingClientRect();
+        if (hostRect.width > 100 && hostRect.height > 100) {
+          // Si el contenido está visible, considerar que está listo
+          // Las imágenes pueden seguir cargándose en segundo plano
+          return true;
+        }
+      }
+      
+      // Si el canvas tiene tamaño adecuado, considerar que está listo (más permisivo)
+      if (canvas.width > 100 && canvas.height > 100) {
+        return true;
+      }
+      
+      return false;
+    }
+    
+    // Verificar si Flutter está cargando (antes del primer frame)
+    flutterLoadingCheck = setInterval(function() {
+      // Verificar si Flutter está cargando scripts
+      const flutterScripts = document.querySelectorAll('script[src*="flutter"], script[src*="main.dart"]');
+      const ddcLoader = document.querySelector('script[src*="ddc_module_loader"]');
+      
+      // Si hay scripts de Flutter pero aún no hay primer frame, mantener splash visible
+      if ((flutterScripts.length > 0 || ddcLoader) && !firstFrameReceived) {
+        console.log('⏳ Flutter está cargando, manteniendo splash visible...');
+        return; // Continuar mostrando splash
+      }
+    }, 500); // Verificar cada 500ms
+    
+    // Escuchar el primer frame de Flutter
+    window.addEventListener('flutter-first-frame', function() {
+      firstFrameReceived = true;
+      readyChecks = 0; // Resetear contador
+      firstReadyTime = 0;
+      
+      // Limpiar el intervalo de verificación de carga
+      if (flutterLoadingCheck) {
+        clearInterval(flutterLoadingCheck);
+        flutterLoadingCheck = null;
+      }
+      
+      console.log('🎬 Flutter first frame received, waiting for WelcomeScreen...');
+      
+      // Esperar más tiempo antes de empezar a verificar (dar tiempo a que Firebase/Supabase y WelcomeScreen inicialicen)
+      // Basado en los logs, Firebase y Supabase tardan ~1-2 segundos, luego WelcomeScreen se renderiza
+      setTimeout(function() {
+        console.log('🔍 Starting to check if WelcomeScreen is ready...');
+        // Iniciar polling para verificar cuando WelcomeScreen esté completamente listo
+        let attempts = 0;
+        const maxAttempts = 50; // Máximo 20 segundos (200 * 100ms)
+        
+        checkInterval = setInterval(function() {
+          attempts++;
+          
+          const isReady = isWelcomeScreenFullyReady();
+          
+          if (isReady) {
+            // Registrar el tiempo cuando empezó a estar listo
+            if (readyChecks === 0) {
+              firstReadyTime = Date.now();
+              console.log('✅ WelcomeScreen detected as ready, starting stability check...');
+            }
+            readyChecks++;
+            
+            // Requerir múltiples verificaciones consecutivas Y que haya pasado tiempo suficiente
+            if (readyChecks >= requiredReadyChecks) {
+              const timeSinceFirstReady = Date.now() - firstReadyTime;
+              
+              // NO verificar imágenes - solo esperar estabilidad mínima
+              // Asegurar que haya estado listo por al menos 50ms de estabilidad
+              if (timeSinceFirstReady >= 50) {
+                console.log('✅ WelcomeScreen is stable and ready, hiding splash...');
+                // WelcomeScreen está completamente visible y estable
+                // Las imágenes pueden seguir cargándose en segundo plano
+                clearInterval(checkInterval);
+                checkInterval = null;
+                // Esperar un poco más para asegurar que la transición sea suave
+                setTimeout(hideSplash, 1);
+              }
+            }
+          } else {
+            // Resetear contador si no está listo
+            if (readyChecks > 0) {
+              console.log('⚠️ WelcomeScreen not ready yet, resetting check...');
+            }
+            readyChecks = 0;
+            firstReadyTime = 0;
+          }
+          
+          if (attempts >= maxAttempts) {
+            // Timeout: ocultar de todas formas
+            console.log('⏱️ Timeout reached, hiding splash anyway...');
+            clearInterval(checkInterval);
+            checkInterval = null;
+            hideSplash();
+          }
+        }, 10); // Verificar cada 100ms
+      }, 100); // Esperar 3 segundos después del primer frame (tiempo suficiente para que Firebase/Supabase/WelcomeScreen inicialicen completamente)
+    });
+    
+    // Fallback: ocultar después de máximo 30 segundos si nada funciona
+    // (suficiente tiempo para que Flutter cargue completamente, incluso en conexiones lentas)
+    hideTimeout = setTimeout(function() {
+      if (!appReady) {
+        console.log('⏱️ Fallback timeout (30s) reached, hiding splash...');
+        hideSplash();
+      }
+    }, 30000);
+  </script>
+  
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
+

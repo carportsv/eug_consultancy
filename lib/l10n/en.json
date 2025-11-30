@@ -34,7 +34,8 @@
     "select": "Select",
     "verifiedDrivers": "Verified drivers",
     "createAccount": "Create account",
-    "accountRequiredMessage": "You need to create an account to request rides. Would you like to create an account now?"
+    "loginOrCreateAccount": "Sign in / Create account",
+    "accountRequiredMessage": "You need to sign in or create an account to request rides."
   },
   "auth": {
     "register": "Register",

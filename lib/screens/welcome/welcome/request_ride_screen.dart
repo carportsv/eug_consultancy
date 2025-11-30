@@ -12,8 +12,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../auth/login_screen.dart';
 import '../../../auth/supabase_service.dart';
-import '../../../services/ride_service.dart';
+import '../../../l10n/app_localizations.dart';
+import '../form/address_autocomplete_service.dart';
+import '../form/ride_calculation_service.dart';
 import 'welcome_screen.dart';
+import 'payment_confirmation_screen.dart';
 
 // Constants
 const _kPrimaryColor = Color(0xFF1D4ED8);
@@ -29,6 +32,7 @@ class RequestRideScreen extends StatefulWidget {
   final TimeOfDay? initialTime;
   final int? initialPassengers;
   final double? initialEstimatedPrice;
+  final double? initialDistanceKm;
   final LatLng? initialOriginCoords;
   final LatLng? initialDestinationCoords;
   final String? initialVehicleType;
@@ -41,6 +45,7 @@ class RequestRideScreen extends StatefulWidget {
     this.initialTime,
     this.initialPassengers,
     this.initialEstimatedPrice,
+    this.initialDistanceKm,
     this.initialOriginCoords,
     this.initialDestinationCoords,
     this.initialVehicleType,
@@ -65,24 +70,18 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   final _dateController = TextEditingController();
   final _timeController = TextEditingController();
   final _notesController = TextEditingController();
-  // Card payment fields
-  final _cardNumberController = TextEditingController();
-  final _cardExpiryController = TextEditingController();
-  final _cardCvvController = TextEditingController();
-  final _cardNameController = TextEditingController();
 
   // Form State
   String _selectedPriority = 'normal';
   String _selectedVehicleType = 'sedan';
-  String _selectedPaymentMethod = 'card';
   int _passengerCount = 1;
   int _childSeats = 0;
   int _handLuggage = 0;
   int _checkInLuggage = 0;
-  bool _isLoading = false;
 
   // Map State
   final MapController _mapController = MapController();
+  bool _isMapReady = false; // Flag para saber si el mapa está listo
   LatLng? _originCoords;
   LatLng? _destinationCoords;
   Marker? _originMarker;
@@ -97,7 +96,6 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   Timer? _debounceTimer;
 
   final SupabaseService _supabaseService = SupabaseService();
-  final RideService _rideService = RideService();
 
   // User state
   User? _currentUser;
@@ -143,6 +141,25 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       },
     );
 
+    // Agregar listeners a los FocusNodes para geocodificar cuando pierden el foco
+    _originFocusNode.addListener(() {
+      if (!_originFocusNode.hasFocus && _originController.text.trim().isNotEmpty) {
+        // Si el campo pierde el foco y hay texto, pero no hay coordenadas, intentar geocodificar
+        if (_originCoords == null && _originController.text.trim().length >= 3) {
+          _geocodeAddress(_originController.text.trim(), 'origin');
+        }
+      }
+    });
+
+    _destinationFocusNode.addListener(() {
+      if (!_destinationFocusNode.hasFocus && _destinationController.text.trim().isNotEmpty) {
+        // Si el campo pierde el foco y hay texto, pero no hay coordenadas, intentar geocodificar
+        if (_destinationCoords == null && _destinationController.text.trim().length >= 3) {
+          _geocodeAddress(_destinationController.text.trim(), 'destination');
+        }
+      }
+    });
+
     // Inicializar campos con valores pasados desde WelcomeScreen
     if (widget.initialOrigin != null && widget.initialOrigin!.isNotEmpty) {
       _originController.text = widget.initialOrigin!;
@@ -159,10 +176,16 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       ).format(DateTime(2000, 1, 1, widget.initialTime!.hour, widget.initialTime!.minute));
     }
     if (widget.initialPassengers != null) {
-      _passengerCount = widget.initialPassengers!;
+      // Validar que el valor esté en el rango válido (1-8)
+      final passengers = widget.initialPassengers!;
+      _passengerCount = passengers >= 1 && passengers <= 8 ? passengers : 1;
     }
     if (widget.initialEstimatedPrice != null) {
       _priceController.text = widget.initialEstimatedPrice!.toStringAsFixed(2);
+    }
+    // Inicializar distancia si viene desde WelcomeScreen
+    if (widget.initialDistanceKm != null) {
+      _distanceController.text = widget.initialDistanceKm!.toStringAsFixed(2);
     }
 
     // Inicializar tipo de vehículo si viene desde WelcomeScreen
@@ -175,26 +198,74 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       _originCoords = widget.initialOriginCoords;
       _originMarker = Marker(
         point: _originCoords!,
-        width: 40,
-        height: 40,
-        child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+        width: 50,
+        height: 50,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.red,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, spreadRadius: 2),
+            ],
+          ),
+          child: const Icon(Icons.location_on, color: Colors.white, size: 30),
+        ),
       );
+      if (kDebugMode) {
+        debugPrint(
+          '[RequestRideScreen] ✅ Marcador de origen inicializado en initState: ${_originCoords!.latitude}, ${_originCoords!.longitude}',
+        );
+      }
+      // Forzar actualización del estado para mostrar el marcador
+      if (mounted) {
+        setState(() {});
+      }
     }
     if (widget.initialDestinationCoords != null) {
       _destinationCoords = widget.initialDestinationCoords;
       _destinationMarker = Marker(
         point: _destinationCoords!,
-        width: 40,
-        height: 40,
-        child: const Icon(Icons.flag, color: Colors.green, size: 40),
+        width: 50,
+        height: 50,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.green,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, spreadRadius: 2),
+            ],
+          ),
+          child: const Icon(Icons.flag, color: Colors.white, size: 30),
+        ),
       );
+      if (kDebugMode) {
+        debugPrint(
+          '[RequestRideScreen] ✅ Marcador de destino inicializado en initState: ${_destinationCoords!.latitude}, ${_destinationCoords!.longitude}',
+        );
+      }
+      // Forzar actualización del estado para mostrar el marcador
+      if (mounted) {
+        setState(() {});
+      }
     }
 
-    // Si hay ambas coordenadas, calcular la ruta
-    if (widget.initialOriginCoords != null && widget.initialDestinationCoords != null) {
+    // Asegurar que el precio se muestre si existe
+    // Pero si hay coordenadas iniciales, se recalculará en onMapReady
+    if (widget.initialEstimatedPrice != null &&
+        (widget.initialOriginCoords == null || widget.initialDestinationCoords == null)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _calculateRoute();
-        _updateMapBounds();
+        if (mounted && _priceController.text.isEmpty) {
+          setState(() {
+            _priceController.text = widget.initialEstimatedPrice!.toStringAsFixed(2);
+            if (kDebugMode) {
+              debugPrint(
+                '[RequestRideScreen] 💰 Precio inicial establecido: ${widget.initialEstimatedPrice}',
+              );
+            }
+          });
+        }
       });
     }
 
@@ -324,10 +395,6 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     _dateController.dispose();
     _timeController.dispose();
     _notesController.dispose();
-    _cardNumberController.dispose();
-    _cardExpiryController.dispose();
-    _cardCvvController.dispose();
-    _cardNameController.dispose();
     _mapController.dispose();
     _originFocusNode.dispose();
     _destinationFocusNode.dispose();
@@ -375,25 +442,300 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     ).showSnackBar(const SnackBar(content: Text('Mi perfil (próximamente)')));
   }
 
+  void _showValidationErrorDialog(String errorMessage, List<String> missingFields) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_kBorderRadius * 2)),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(_kBorderRadius * 2),
+            border: Border.all(color: Colors.red.withValues(alpha: 0.3), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(_kSpacing * 2),
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icono de error
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.red.shade300, width: 2),
+                ),
+                child: Icon(Icons.error_outline, size: 40, color: Colors.red.shade600),
+              ),
+              const SizedBox(height: _kSpacing * 2),
+              // Título
+              Text(
+                'Campos Requeridos',
+                style: GoogleFonts.exo(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: _kTextColor,
+                  letterSpacing: -0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: _kSpacing),
+              // Mensaje
+              Text(
+                errorMessage,
+                style: GoogleFonts.exo(
+                  fontSize: 15,
+                  color: Colors.grey.shade700,
+                  height: 1.6,
+                  fontWeight: FontWeight.w400,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (missingFields.isNotEmpty) ...[
+                const SizedBox(height: _kSpacing),
+                Container(
+                  padding: const EdgeInsets.all(_kSpacing),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(_kBorderRadius),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Campos faltantes:',
+                        style: GoogleFonts.exo(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...missingFields.map(
+                        (field) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.circle, size: 6, color: Colors.red.shade600),
+                              const SizedBox(width: 8),
+                              Text(
+                                field,
+                                style: GoogleFonts.exo(fontSize: 13, color: Colors.red.shade700),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: _kSpacing * 2.5),
+              // Botón
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade600,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 4,
+                    shadowColor: Colors.red.shade600.withValues(alpha: 0.4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_kBorderRadius),
+                    ),
+                  ),
+                  child: Text(
+                    'Entendido',
+                    style: GoogleFonts.exo(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showAuthRequiredDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cuenta requerida'),
-        content: const Text(
-          'Necesitas crear una cuenta para solicitar viajes. ¿Deseas crear una cuenta ahora?',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _kPrimaryColor),
-            onPressed: () {
-              Navigator.of(context).pop();
-              _navigateToLogin();
-            },
-            child: const Text('Crear cuenta', style: TextStyle(color: Colors.white)),
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_kBorderRadius * 2)),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(_kBorderRadius * 2),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+                spreadRadius: 2,
+              ),
+            ],
           ),
-        ],
+          padding: const EdgeInsets.all(_kSpacing * 2),
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icono decorativo con gradiente
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      _kPrimaryColor.withValues(alpha: 0.15),
+                      _kPrimaryColor.withValues(alpha: 0.05),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _kPrimaryColor.withValues(alpha: 0.2), width: 2),
+                ),
+                child: Icon(Icons.person_add_alt_1, size: 40, color: _kPrimaryColor),
+              ),
+              const SizedBox(height: _kSpacing * 2),
+              // Título
+              Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context);
+                  return Text(
+                    l10n?.accountRequired ?? 'Cuenta requerida',
+                    style: GoogleFonts.exo(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: _kTextColor,
+                      letterSpacing: -0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  );
+                },
+              ),
+              const SizedBox(height: _kSpacing),
+              // Mensaje
+              Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context);
+                  return Text(
+                    l10n?.accountRequiredMessage ??
+                        'Necesitas iniciar sesión o crear una cuenta para solicitar viajes.',
+                    style: GoogleFonts.exo(
+                      fontSize: 15,
+                      color: Colors.grey.shade700,
+                      height: 1.6,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    textAlign: TextAlign.center,
+                  );
+                },
+              ),
+              const SizedBox(height: _kSpacing * 2.5),
+              // Botones
+              Row(
+                children: [
+                  // Botón cancelar
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(_kBorderRadius),
+                        ),
+                        backgroundColor: Colors.white.withValues(alpha: 0.5),
+                      ),
+                      child: Builder(
+                        builder: (context) {
+                          final l10n = AppLocalizations.of(context);
+                          return Text(
+                            l10n?.cancel ?? 'Cancelar',
+                            style: GoogleFonts.exo(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: _kSpacing),
+                  // Botón iniciar sesión / crear cuenta
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _navigateToLogin();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kPrimaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 4,
+                        shadowColor: _kPrimaryColor.withValues(alpha: 0.4),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(_kBorderRadius),
+                        ),
+                      ),
+                      child: Builder(
+                        builder: (context) {
+                          final l10n = AppLocalizations.of(context);
+                          final text = l10n != null
+                              ? (l10n.loginOrCreateAccount.isNotEmpty &&
+                                        l10n.loginOrCreateAccount != 'form.loginOrCreateAccount'
+                                    ? l10n.loginOrCreateAccount
+                                    : 'Iniciar sesión / Crear cuenta')
+                              : 'Iniciar sesión / Crear cuenta';
+                          return Text(
+                            text,
+                            style: GoogleFonts.exo(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.2,
+                            ),
+                            textAlign: TextAlign.center,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -401,15 +743,19 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade200,
       appBar: AppBar(
-        title: Text(
-          'Solicitar Viaje',
-          style: GoogleFonts.exo(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: _kPrimaryColor,
-        elevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.arrow_back, color: _kTextColor),
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: _currentUser != null
@@ -431,12 +777,12 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                         // Foto de perfil o icono
                         CircleAvatar(
                           radius: 18,
-                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          backgroundColor: Colors.grey.shade200,
                           backgroundImage: _currentUser!.photoURL != null
                               ? NetworkImage(_currentUser!.photoURL!)
                               : null,
                           child: _currentUser!.photoURL == null
-                              ? const Icon(Icons.person, color: Colors.white, size: 20)
+                              ? Icon(Icons.person, color: _kTextColor, size: 20)
                               : null,
                         ),
                         const SizedBox(width: 8),
@@ -446,13 +792,13 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                               _currentUser!.email?.split('@').first ??
                               'Usuario',
                           style: GoogleFonts.exo(
-                            color: Colors.white,
+                            color: _kTextColor,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 20),
+                        Icon(Icons.keyboard_arrow_down, color: _kTextColor, size: 20),
                       ],
                     ),
                   ),
@@ -588,65 +934,58 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       ),
       body: Stack(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Colors.white, _kPrimaryColor.withValues(alpha: 0.03)],
-              ),
-            ),
-            child: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth > 900) {
-                    // Layout ancho: header arriba, luego form y mapa lado a lado
-                    return Column(
-                      children: [
-                        Padding(padding: const EdgeInsets.all(24.0), child: _buildHeader(context)),
-                        Expanded(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Form Section
-                              Expanded(
-                                flex: 2,
-                                child: Container(
-                                  margin: const EdgeInsets.only(left: 24, right: 12, bottom: 24),
-                                  child: _buildForm(hasInternalScroll: true),
-                                ),
+          // Fondo gris claro (sin imágenes de fondo)
+          Container(decoration: BoxDecoration(color: Colors.grey.shade100)),
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 900) {
+                  // Layout ancho: header arriba, luego form y mapa lado a lado
+                  return Column(
+                    children: [
+                      Padding(padding: const EdgeInsets.all(24.0), child: _buildHeader(context)),
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Form Section
+                            Expanded(
+                              flex: 2,
+                              child: Container(
+                                margin: const EdgeInsets.only(left: 24, right: 12, bottom: 24),
+                                child: _buildForm(hasInternalScroll: true),
                               ),
-                              // Map Section
-                              Expanded(
-                                flex: 3,
-                                child: Container(
-                                  margin: const EdgeInsets.only(left: 12, right: 24),
-                                  child: _buildMapPlaceholder(),
-                                ),
+                            ),
+                            // Map Section
+                            Expanded(
+                              flex: 3,
+                              child: Container(
+                                margin: const EdgeInsets.only(left: 12, right: 24),
+                                child: _buildMapPlaceholder(),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    );
-                  } else {
-                    // Layout estrecho: todo en columna con scroll
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header Section
-                          _buildHeader(context),
-                          const SizedBox(height: _kSpacing * 2),
-                          // Form Section (sin su propio scroll en layout estrecho)
-                          _buildForm(hasInternalScroll: false),
-                        ],
                       ),
-                    );
-                  }
-                },
-              ),
+                    ],
+                  );
+                } else {
+                  // Layout estrecho: todo en columna con scroll
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header Section
+                        _buildHeader(context),
+                        const SizedBox(height: _kSpacing * 2),
+                        // Form Section (sin su propio scroll en layout estrecho)
+                        _buildForm(hasInternalScroll: false),
+                      ],
+                    ),
+                  );
+                }
+              },
             ),
           ),
         ],
@@ -664,11 +1003,11 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     return Container(
       padding: const EdgeInsets.all(_kSpacing * 2),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(_kBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -695,6 +1034,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: _kTextColor,
+                    letterSpacing: -0.5,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -752,15 +1092,6 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
               const SizedBox(width: _kSpacing),
               Expanded(
                 child: _buildDropdownFormField(
-                  label: 'Child Seats',
-                  value: _childSeats.toString(),
-                  items: List.generate(4, (i) => i.toString()),
-                  onChanged: (val) => setState(() => _childSeats = int.parse(val!)),
-                ),
-              ),
-              const SizedBox(width: _kSpacing),
-              Expanded(
-                child: _buildDropdownFormField(
                   label: 'Hand Luggage',
                   value: _handLuggage.toString(),
                   items: List.generate(5, (i) => i.toString()),
@@ -774,6 +1105,15 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                   value: _checkInLuggage.toString(),
                   items: List.generate(6, (i) => i.toString()),
                   onChanged: (val) => setState(() => _checkInLuggage = int.parse(val!)),
+                ),
+              ),
+              const SizedBox(width: _kSpacing),
+              Expanded(
+                child: _buildDropdownFormField(
+                  label: 'Child Seats',
+                  value: _childSeats.toString(),
+                  items: List.generate(4, (i) => i.toString()),
+                  onChanged: (val) => setState(() => _childSeats = int.parse(val!)),
                 ),
               ),
             ],
@@ -790,14 +1130,16 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             validator: _validateRequiredField,
           ),
           _buildTextFormField(
-            label: 'Email address',
+            label: 'Email address *',
             controller: _clientEmailController,
             keyboardType: TextInputType.emailAddress,
+            validator: _validateEmail,
           ),
           _buildTextFormField(
-            label: 'Contact number',
+            label: 'Contact number *',
             controller: _clientPhoneController,
             keyboardType: TextInputType.phone,
+            validator: _validateRequiredField,
           ),
 
           const SizedBox(height: _kSpacing * 1.5),
@@ -820,11 +1162,19 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
           Row(
             children: [
               Expanded(
-                child: _buildDatePickerField(label: 'Fecha del Viaje', controller: _dateController),
+                child: _buildDatePickerField(
+                  label: 'Fecha del Viaje *',
+                  controller: _dateController,
+                  validator: _validateRequiredDate,
+                ),
               ),
               const SizedBox(width: _kSpacing),
               Expanded(
-                child: _buildTimePickerField(label: 'Hora del Viaje', controller: _timeController),
+                child: _buildTimePickerField(
+                  label: 'Hora del Viaje *',
+                  controller: _timeController,
+                  validator: _validateRequiredTime,
+                ),
               ),
             ],
           ),
@@ -846,16 +1196,9 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
 
           const SizedBox(height: _kSpacing * 1.5),
 
-          // Payment & Fare Section
-          _buildSectionHeader('Payment & Fare'),
+          // Fare Display Section
+          _buildSectionHeader('Costo del Viaje'),
           const SizedBox(height: _kSpacing),
-          _buildPaymentMethodSelection(),
-          const SizedBox(height: _kSpacing),
-          // Card details (only shown when card is selected)
-          if (_selectedPaymentMethod == 'card') ...[
-            _buildCardDetailsSection(),
-            const SizedBox(height: _kSpacing),
-          ],
           _buildFareDisplay(),
 
           // Action Buttons
@@ -867,11 +1210,11 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(_kBorderRadius),
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(_kBorderRadius * 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -886,10 +1229,13 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   Widget _buildMapPlaceholder() {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Reducir altura un 10% (multiplicar por 0.9)
+        final baseHeight = constraints.maxHeight > 0 ? constraints.maxHeight : 600;
+        final reducedHeight = baseHeight * 0.9;
         return Container(
-          height: constraints.maxHeight > 0 ? constraints.maxHeight : 600,
+          height: reducedHeight,
           decoration: BoxDecoration(
-            color: Colors.grey[200],
+            color: Colors.grey.shade100,
             borderRadius: BorderRadius.circular(_kBorderRadius),
             border: Border.all(color: Colors.grey.shade300),
           ),
@@ -907,6 +1253,9 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                     ),
                   )
                 : FlutterMap(
+                    key: ValueKey(
+                      'map-${_originMarker?.point}-${_destinationMarker?.point}',
+                    ), // Key única para forzar reconstrucción cuando cambian los marcadores
                     mapController: _mapController,
                     options: MapOptions(
                       initialCenter:
@@ -918,6 +1267,57 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                               _destinationCoords != null
                           ? 13.0
                           : 2.0,
+                      onMapReady: () {
+                        // Marcar el mapa como listo cuando se renderiza por primera vez
+                        if (kDebugMode) {
+                          debugPrint('[RequestRideScreen] ✅ Mapa listo para usar');
+                        }
+                        setState(() {
+                          _isMapReady = true;
+                        });
+                        // Si hay coordenadas iniciales, centrar el mapa ahora que está listo
+                        if (widget.initialOriginCoords != null &&
+                            widget.initialDestinationCoords != null) {
+                          if (kDebugMode) {
+                            debugPrint(
+                              '[RequestRideScreen] 🗺️ Inicializando mapa con origen y destino desde WelcomeScreen',
+                            );
+                          }
+                          // Esperar un poco más para asegurar que el mapa esté completamente renderizado
+                          Future.delayed(const Duration(milliseconds: 200), () async {
+                            if (mounted) {
+                              // Forzar actualización del mapa para mostrar los marcadores
+                              setState(() {});
+                              // Esperar un frame más para que los marcadores se rendericen
+                              await Future.delayed(const Duration(milliseconds: 50));
+                              if (mounted) {
+                                _centerMapOnPoints();
+                                await _calculateRoute();
+                                await _recalculatePriceForVehicleType(forceRecalculate: true);
+                                // Forzar actualización final del mapa
+                                if (mounted) {
+                                  setState(() {
+                                    if (kDebugMode) {
+                                      debugPrint(
+                                        '[RequestRideScreen] ✅ Mapa actualizado con marcadores, ruta y precio',
+                                      );
+                                    }
+                                  });
+                                }
+                              }
+                            }
+                          });
+                        } else if (widget.initialOriginCoords != null ||
+                            widget.initialDestinationCoords != null) {
+                          // Si solo hay una coordenada, centrar el mapa cuando esté listo
+                          Future.delayed(const Duration(milliseconds: 200), () {
+                            if (mounted) {
+                              setState(() {});
+                              _centerMapOnPoints();
+                            }
+                          });
+                        }
+                      },
                       onTap: _handleMapTap,
                     ),
                     children: [
@@ -925,9 +1325,11 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'com.example.fzkt_openstreet',
                       ),
+                      // Mostrar la ruta primero (debajo de los marcadores)
+                      if (_routePolyline != null) PolylineLayer(polylines: [_routePolyline!]),
+                      // Mostrar los marcadores encima de la ruta
                       if (_originMarker != null) MarkerLayer(markers: [_originMarker!]),
                       if (_destinationMarker != null) MarkerLayer(markers: [_destinationMarker!]),
-                      if (_routePolyline != null) PolylineLayer(polylines: [_routePolyline!]),
                     ],
                   ),
           ),
@@ -952,18 +1354,18 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
           TextFormField(
             controller: controller,
             focusNode: focusNode,
-            readOnly: _activeInputType != type,
-            style: GoogleFonts.exo(fontSize: 16),
+            readOnly: false, // Siempre editable
+            style: GoogleFonts.exo(fontSize: 16, color: _kTextColor, fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               labelText: label,
-              labelStyle: GoogleFonts.exo(color: Colors.grey.shade600),
+              labelStyle: GoogleFonts.exo(color: Colors.grey.shade700, fontWeight: FontWeight.w500),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(_kBorderRadius),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderSide: BorderSide(color: Colors.grey.shade400, width: 1.5),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(_kBorderRadius),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderSide: BorderSide(color: Colors.grey.shade400, width: 1.5),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(_kBorderRadius),
@@ -981,84 +1383,104 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 ),
                 child: Icon(icon, color: Colors.white, size: 20),
               ),
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.edit, size: 20, color: _kPrimaryColor),
-                    tooltip: 'Escribir',
-                    onPressed: () => _enableInput(type),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.map, size: 20, color: _kPrimaryColor),
-                    tooltip: 'Seleccionar del mapa',
-                    onPressed: () => _selectFromMap(type),
-                  ),
-                ],
+              suffixIcon: IconButton(
+                icon: Icon(Icons.map, size: 20, color: _kPrimaryColor),
+                tooltip: 'Seleccionar del mapa',
+                onPressed: () => _selectFromMap(type),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              hintText: _activeInputType != type
-                  ? 'Haga clic en "Escribir" o "Seleccionar del mapa" para elegir dirección'
-                  : null,
+              hintText: 'Escribe o selecciona una dirección',
               hintStyle: GoogleFonts.exo(fontSize: 14, color: Colors.grey.shade400),
             ),
             validator: validator,
-            onChanged: _activeInputType == type
-                ? (value) => _onAddressInputChanged(value, type)
-                : null,
+            onChanged: (value) => _onAddressInputChanged(value, type),
+            onEditingComplete: () {
+              // Cuando el usuario presiona Enter, intentar geocodificar la dirección
+              final address = controller.text.trim();
+              if (address.isNotEmpty && address.length >= 3) {
+                _geocodeAddress(address, type);
+              }
+              focusNode.unfocus();
+            },
+            onFieldSubmitted: (value) {
+              // Cuando el usuario presiona Enter, intentar geocodificar la dirección
+              final address = value.trim();
+              if (address.isNotEmpty && address.length >= 3) {
+                _geocodeAddress(address, type);
+              }
+              focusNode.unfocus();
+            },
           ),
           if (_autocompleteResults.isNotEmpty && _activeInputType == type)
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: _kPrimaryColor.withValues(alpha: 0.2)),
-                borderRadius: BorderRadius.circular(_kBorderRadius),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              constraints: const BoxConstraints(maxHeight: 250),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _autocompleteResults.length,
-                itemBuilder: (context, index) {
-                  final result = _autocompleteResults[index];
-                  final address = result['display_name'] as String? ?? '';
-                  return InkWell(
-                    onTap: () => _selectAddressFromAutocomplete(result, type),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Colors.grey.shade200,
-                            width: index < _autocompleteResults.length - 1 ? 1 : 0,
-                          ),
+            Builder(
+              builder: (context) {
+                if (kDebugMode) {
+                  debugPrint(
+                    '[RequestRideScreen] Mostrando ${_autocompleteResults.length} resultados de autocompletado para $type',
+                  );
+                }
+                return Material(
+                  elevation: 8,
+                  borderRadius: BorderRadius.circular(_kBorderRadius),
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: _kPrimaryColor.withValues(alpha: 0.2)),
+                      borderRadius: BorderRadius.circular(_kBorderRadius),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.location_on, color: _kPrimaryColor, size: 20),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              address,
-                              style: GoogleFonts.exo(fontSize: 14, color: _kTextColor),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                      ],
+                    ),
+                    constraints: const BoxConstraints(maxHeight: 250),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _autocompleteResults.length,
+                      itemBuilder: (context, index) {
+                        final result = _autocompleteResults[index];
+                        final address = result['display_name'] as String? ?? '';
+                        if (kDebugMode && index == 0) {
+                          debugPrint(
+                            '[RequestRideScreen] Construyendo item 0: display_name="$address"',
+                          );
+                        }
+                        return InkWell(
+                          onTap: () => _selectAddressFromAutocomplete(result, type),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: Colors.grey.shade100,
+                                  width: index < _autocompleteResults.length - 1 ? 1 : 0,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.location_on, color: _kPrimaryColor, size: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    address,
+                                    style: GoogleFonts.exo(fontSize: 14, color: _kTextColor),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
         ],
       ),
@@ -1110,28 +1532,22 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
               elevation: 3,
               shadowColor: _kPrimaryColor.withValues(alpha: 0.4),
             ),
-            onPressed: _isLoading ? null : _handleCreateRide,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.check_circle, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Solicitar Viaje',
-                        style: GoogleFonts.exo(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+            onPressed: _handleCreateRide,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Solicitar Viaje',
+                  style: GoogleFonts.exo(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1163,24 +1579,24 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         maxLines: maxLines,
         maxLength: maxLength,
         inputFormatters: inputFormatters,
-        style: GoogleFonts.exo(fontSize: 16),
+        style: GoogleFonts.exo(fontSize: 16, color: _kTextColor, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: GoogleFonts.exo(color: Colors.grey.shade600),
+          labelStyle: GoogleFonts.exo(color: Colors.grey.shade700, fontWeight: FontWeight.w500),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(_kBorderRadius),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: Colors.grey.shade400, width: 1.5),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(_kBorderRadius),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: Colors.grey.shade400, width: 1.5),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(_kBorderRadius),
             borderSide: BorderSide(color: _kPrimaryColor, width: 2),
           ),
           filled: true,
-          fillColor: readOnly ? Colors.grey.shade50 : Colors.white,
+          fillColor: readOnly ? Colors.grey.shade100 : Colors.white,
           prefixIcon: icon != null ? Icon(icon, color: _kPrimaryColor) : null,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
@@ -1189,7 +1605,11 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     );
   }
 
-  Widget _buildDatePickerField({required String label, required TextEditingController controller}) {
+  Widget _buildDatePickerField({
+    required String label,
+    required TextEditingController controller,
+    String? Function(String?)? validator,
+  }) {
     DateTime? selectedDate;
     if (controller.text.isNotEmpty) {
       try {
@@ -1201,81 +1621,115 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: _kSpacing),
-      child: GestureDetector(
-        onTap: _showDatePicker,
-        child: Container(
-          height: 56,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(_kBorderRadius),
-            border: Border.all(
-              color: selectedDate != null
-                  ? _kPrimaryColor.withValues(alpha: 0.3)
-                  : Colors.transparent,
-              width: 1.5,
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
+      child: FormField<String>(
+        initialValue: controller.text,
+        validator: validator,
+        builder: (field) {
+          final hasError = field.hasError;
+          // Actualizar el estado del FormField cuando cambia el controlador
+          if (controller.text != field.value) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              field.didChange(controller.text);
+            });
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _kPrimaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.calendar_today, color: _kPrimaryColor, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: GoogleFonts.exo(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                        fontWeight: FontWeight.w500,
-                      ),
+              GestureDetector(
+                onTap: () async {
+                  await _showDatePicker();
+                  // Actualizar el FormField después de seleccionar la fecha
+                  field.didChange(controller.text);
+                  field.validate();
+                },
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(_kBorderRadius),
+                    border: Border.all(
+                      color: hasError
+                          ? Colors.red.shade400
+                          : (selectedDate != null ? _kPrimaryColor : Colors.grey.shade400),
+                      width: 1.5,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      selectedDate != null
-                          ? DateFormat('dd/MM/yyyy').format(selectedDate)
-                          : 'Seleccionar fecha',
-                      style: GoogleFonts.exo(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: selectedDate != null ? _kTextColor : Colors.grey.shade400,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _kPrimaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.calendar_today, color: _kPrimaryColor, size: 20),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              label,
+                              style: GoogleFonts.exo(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              selectedDate != null
+                                  ? DateFormat('dd/MM/yyyy').format(selectedDate)
+                                  : 'Seleccionar fecha',
+                              style: GoogleFonts.exo(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: selectedDate != null ? _kTextColor : Colors.grey.shade400,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (selectedDate != null)
+                        Icon(Icons.check_circle, color: _kPrimaryColor, size: 20),
+                    ],
+                  ),
                 ),
               ),
-              if (selectedDate != null) Icon(Icons.check_circle, color: _kPrimaryColor, size: 20),
+              if (hasError)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, left: 16),
+                  child: Text(
+                    field.errorText ?? '',
+                    style: GoogleFonts.exo(fontSize: 12, color: Colors.red.shade600),
+                  ),
+                ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildTimePickerField({required String label, required TextEditingController controller}) {
+  Widget _buildTimePickerField({
+    required String label,
+    required TextEditingController controller,
+    String? Function(String?)? validator,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: _kSpacing),
       child: Container(
         height: 56,
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(_kBorderRadius),
           border: Border.all(
-            color: controller.text.isNotEmpty
-                ? _kPrimaryColor.withValues(alpha: 0.3)
-                : Colors.transparent,
+            color: controller.text.isNotEmpty ? _kPrimaryColor : Colors.grey.shade400,
             width: 1.5,
           ),
         ),
@@ -1311,29 +1765,31 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                   hintText: 'HH:mm (ej: 08:30)',
                   hintStyle: GoogleFonts.exo(fontSize: 14, color: Colors.grey.shade400),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return null; // Campo opcional
-                  }
-                  // Validar formato HH:mm
-                  final timeRegex = RegExp(r'^([0-1]?[0-9]|2[0-3]):([0-5]?[0-9])$');
-                  if (!timeRegex.hasMatch(value)) {
-                    return 'Formato inválido. Use HH:mm (ej: 08:30)';
-                  }
-                  final parts = value.split(':');
-                  final hour = int.tryParse(parts[0]);
-                  final minute = int.tryParse(parts[1]);
-                  if (hour == null || minute == null) {
-                    return 'Formato inválido';
-                  }
-                  if (hour < 0 || hour > 23) {
-                    return 'La hora debe estar entre 00 y 23';
-                  }
-                  if (minute < 0 || minute > 59) {
-                    return 'Los minutos deben estar entre 00 y 59';
-                  }
-                  return null;
-                },
+                validator:
+                    validator ??
+                    ((value) {
+                      if (value == null || value.isEmpty) {
+                        return null; // Campo opcional si no hay validador
+                      }
+                      // Validar formato HH:mm
+                      final timeRegex = RegExp(r'^([0-1]?[0-9]|2[0-3]):([0-5]?[0-9])$');
+                      if (!timeRegex.hasMatch(value)) {
+                        return 'Formato inválido. Use HH:mm (ej: 08:30)';
+                      }
+                      final parts = value.split(':');
+                      final hour = int.tryParse(parts[0]);
+                      final minute = int.tryParse(parts[1]);
+                      if (hour == null || minute == null) {
+                        return 'Formato inválido';
+                      }
+                      if (hour < 0 || hour > 23) {
+                        return 'La hora debe estar entre 00 y 23';
+                      }
+                      if (minute < 0 || minute > 59) {
+                        return 'Los minutos deben estar entre 00 y 59';
+                      }
+                      return null;
+                    }),
               ),
             ),
             IconButton(
@@ -1355,19 +1811,52 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     required List<dynamic> items,
     required ValueChanged<String?> onChanged,
   }) {
+    // Convertir items a DropdownMenuItem y extraer los valores
+    final dropdownItems = items.map<DropdownMenuItem<String>>((item) {
+      if (item is DropdownMenuItem<String?>) {
+        return DropdownMenuItem<String>(value: item.value, child: item.child);
+      } else if (item is String) {
+        return DropdownMenuItem<String>(
+          value: item,
+          child: Text(
+            item,
+            style: GoogleFonts.exo(fontSize: 16, color: _kTextColor, fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        );
+      }
+      return DropdownMenuItem<String>(
+        value: item.toString(),
+        child: Text(
+          item.toString(),
+          style: GoogleFonts.exo(fontSize: 16, color: _kTextColor, fontWeight: FontWeight.w500),
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }).toList();
+
+    // Extraer los valores de los items
+    final itemValues = dropdownItems.map((item) => item.value).whereType<String>().toList();
+
+    // Validar que el valor inicial exista en los items, si no, usar null
+    final validValue = (value != null && itemValues.contains(value)) ? value : null;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: _kSpacing),
       child: DropdownButtonFormField<String>(
+        key: ValueKey(
+          '$label-$validValue',
+        ), // Key única para forzar reconstrucción cuando el valor cambia
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: GoogleFonts.exo(color: Colors.grey.shade600),
+          labelStyle: GoogleFonts.exo(color: Colors.grey.shade700, fontWeight: FontWeight.w500),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(_kBorderRadius),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: Colors.grey.shade400, width: 1.5),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(_kBorderRadius),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: Colors.grey.shade400, width: 1.5),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(_kBorderRadius),
@@ -1377,25 +1866,16 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
           fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
-        initialValue: value,
-        hint: Text('Seleccione una opción', style: GoogleFonts.exo()),
-        items: items.map<DropdownMenuItem<String>>((item) {
-          if (item is DropdownMenuItem<String?>) {
-            return DropdownMenuItem<String>(value: item.value, child: item.child);
-          } else if (item is String) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(item, style: GoogleFonts.exo()),
-            );
-          }
-          return DropdownMenuItem<String>(
-            value: item.toString(),
-            child: Text(item.toString(), style: GoogleFonts.exo()),
-          );
-        }).toList(),
+        initialValue: validValue, // Usar 'initialValue' para establecer el valor inicial
+        hint: Text(
+          'Seleccione una opción',
+          style: GoogleFonts.exo(color: Colors.grey.shade600, fontSize: 16),
+        ),
+        items: dropdownItems,
         onChanged: onChanged,
         isExpanded: true,
-        style: GoogleFonts.exo(fontSize: 16, color: _kTextColor),
+        dropdownColor: Colors.white,
+        style: GoogleFonts.exo(fontSize: 16, color: _kTextColor, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -1493,7 +1973,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
+              color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.directions_car, size: 24),
@@ -1509,27 +1989,34 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 border: Border.all(color: _kPrimaryColor),
               ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    selectedVehicle['name'] as String,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  Flexible(
+                    child: Text(
+                      selectedVehicle['name'] as String,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.people, size: 16),
                       Text('${selectedVehicle['passengers']}'),
                     ],
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.luggage, size: 16),
                       Text('${selectedVehicle['handLuggage']}'),
                     ],
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.luggage_outlined, size: 16),
                       Text('${selectedVehicle['checkInLuggage']}'),
@@ -1570,88 +2057,11 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                       _checkInLuggage = vehicle['checkInLuggage'] as int;
                     });
                     // Recalcular precio cuando cambia el tipo de vehículo
-                    _recalculatePriceForVehicleType();
+                    _recalculatePriceForVehicleType(forceRecalculate: true);
                   }
                 },
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethodSelection() {
-    return SegmentedButton<String>(
-      segments: const [ButtonSegment<String>(value: 'card', label: Text('Card'))],
-      selected: {_selectedPaymentMethod},
-      onSelectionChanged: (Set<String> newSelection) {
-        setState(() {
-          _selectedPaymentMethod = newSelection.first;
-        });
-      },
-    );
-  }
-
-  Widget _buildCardDetailsSection() {
-    return Container(
-      padding: const EdgeInsets.all(_kSpacing),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(_kBorderRadius),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Card Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: _kSpacing),
-          _buildTextFormField(
-            label: 'Card Number *',
-            controller: _cardNumberController,
-            keyboardType: TextInputType.number,
-            validator: _validateCardNumber,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(19),
-              _CardNumberFormatter(),
-            ],
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextFormField(
-                  label: 'Expiry (MM/YY) *',
-                  controller: _cardExpiryController,
-                  keyboardType: TextInputType.number,
-                  validator: _validateCardExpiry,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(4),
-                    _CardExpiryFormatter(),
-                  ],
-                ),
-              ),
-              const SizedBox(width: _kSpacing),
-              Expanded(
-                child: _buildTextFormField(
-                  label: 'CVV *',
-                  controller: _cardCvvController,
-                  keyboardType: TextInputType.number,
-                  validator: _validateCardCvv,
-                  maxLength: 4,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(4),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          _buildTextFormField(
-            label: 'Name on Card *',
-            controller: _cardNameController,
-            validator: _validateRequiredField,
           ),
         ],
       ),
@@ -1778,16 +2188,11 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     _dateController.clear();
     _timeController.clear();
     _notesController.clear();
-    _cardNumberController.clear();
-    _cardExpiryController.clear();
-    _cardCvvController.clear();
-    _cardNameController.clear();
 
     // Reset form state
     setState(() {
       _selectedPriority = 'normal';
       _selectedVehicleType = 'sedan';
-      _selectedPaymentMethod = 'card';
       _passengerCount = 1;
       _childSeats = 0;
       _handLuggage = 0;
@@ -1809,6 +2214,40 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   Future<void> _handleCreateRide() async {
     // Validar formulario
     if (!_formKey.currentState!.validate()) {
+      // Identificar qué campos están vacíos o inválidos
+      final missingFields = <String>[];
+
+      if (_originController.text.trim().isEmpty) {
+        missingFields.add('Origen');
+      }
+      if (_destinationController.text.trim().isEmpty) {
+        missingFields.add('Destino');
+      }
+      if (_clientNameController.text.trim().isEmpty) {
+        missingFields.add('Nombre completo');
+      }
+      if (_clientEmailController.text.trim().isEmpty) {
+        missingFields.add('Email address');
+      }
+      if (_clientPhoneController.text.trim().isEmpty) {
+        missingFields.add('Contact number');
+      }
+      if (_dateController.text.trim().isEmpty) {
+        missingFields.add('Fecha del Viaje');
+      }
+      if (_timeController.text.trim().isEmpty) {
+        missingFields.add('Hora del Viaje');
+      }
+
+      // Mostrar mensaje de error con los campos faltantes
+      final errorMessage = missingFields.isEmpty
+          ? 'Por favor complete todos los campos requeridos'
+          : 'Por favor complete los siguientes campos: ${missingFields.join(', ')}';
+
+      // Mostrar diálogo modal con el error
+      if (mounted) {
+        _showValidationErrorDialog(errorMessage, missingFields);
+      }
       return;
     }
 
@@ -1829,97 +2268,72 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    // Parse form data
+    final originAddress = _originController.text.trim();
+    final destinationAddress = _destinationController.text.trim();
+    final price = double.tryParse(_priceController.text.trim());
+    final distance = double.tryParse(_distanceController.text.trim());
+    final clientName = _clientNameController.text.trim();
+    final notes = _notesController.text.trim();
+    final scheduledDate = _dateController.text.trim();
+    final scheduledTime = _timeController.text.trim();
 
-    try {
-      // Parse form data
-      final originAddress = _originController.text.trim();
-      final destinationAddress = _destinationController.text.trim();
-      final price = double.tryParse(_priceController.text.trim());
-      final distance = double.tryParse(_distanceController.text.trim());
-      final clientName = _clientNameController.text.trim();
-      final notes = _notesController.text.trim();
-      final scheduledDate = _dateController.text.trim();
-      final scheduledTime = _timeController.text.trim();
-
-      // Validar precio
-      if (price == null || price <= 0) {
-        throw Exception('El precio debe ser mayor a cero');
-      }
-
-      // Preparar fecha programada si existe
-      DateTime? scheduledDateTime;
-      if (scheduledDate.isNotEmpty && scheduledTime.isNotEmpty) {
-        try {
-          scheduledDateTime = DateTime.parse('${scheduledDate}T$scheduledTime');
-        } catch (e) {
-          throw Exception('Formato de fecha u hora inválido');
-        }
-      }
-
-      // Preparar datos para el servicio
-      final rideData = CreateRideData(
-        originAddress: originAddress,
-        destinationAddress: destinationAddress,
-        price: price,
-        clientName: clientName,
-        originCoords: _originCoords,
-        destinationCoords: _destinationCoords,
-        distanceKm: distance,
-        priority: _selectedPriority,
-        vehicleType: _selectedVehicleType,
-        passengerCount: _passengerCount,
-        childSeats: _childSeats,
-        handLuggage: _handLuggage,
-        checkInLuggage: _checkInLuggage,
-        paymentMethod: _selectedPaymentMethod,
-        clientEmail: _clientEmailController.text.trim().isNotEmpty
-            ? _clientEmailController.text.trim()
-            : null,
-        clientPhone: _clientPhoneController.text.trim().isNotEmpty
-            ? _clientPhoneController.text.trim()
-            : null,
-        notes: notes.isNotEmpty ? notes : null,
-        scheduledDateTime: scheduledDateTime,
-        cardNumber: _selectedPaymentMethod == 'card' ? _cardNumberController.text.trim() : null,
-        cardExpiry: _selectedPaymentMethod == 'card' ? _cardExpiryController.text.trim() : null,
-        cardName: _selectedPaymentMethod == 'card' ? _cardNameController.text.trim() : null,
+    // Validar precio
+    if (price == null || price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('El precio debe ser mayor a cero'),
+          backgroundColor: Colors.red,
+        ),
       );
+      return;
+    }
 
-      // Crear viaje usando el servicio
-      await _rideService.createRideRequest(rideData);
-
-      if (mounted) {
+    // Preparar fecha programada si existe
+    DateTime? scheduledDateTime;
+    if (scheduledDate.isNotEmpty && scheduledTime.isNotEmpty) {
+      try {
+        scheduledDateTime = DateTime.parse('${scheduledDate}T$scheduledTime');
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('¡Viaje solicitado exitosamente!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Clear form
-        _handleCancel();
-      }
-    } catch (e) {
-      // Manejo seguro de excepciones para Flutter Web
-      if (kDebugMode) {
-        debugPrint('[RequestRideScreen] Error creando viaje: $e');
-      }
-      if (mounted) {
-        final errorMessage = e is Exception
-            ? e.toString().replaceAll('Exception: ', '')
-            : 'Error desconocido al solicitar viaje';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al solicitar viaje: $errorMessage'),
+            content: Text('Formato de fecha u hora inválido'),
             backgroundColor: Colors.red,
           ),
         );
+        return;
       }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    }
+
+    // Navegar a la pantalla de confirmación de pago
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => PaymentConfirmationScreen(
+            originAddress: originAddress,
+            destinationAddress: destinationAddress,
+            price: price,
+            distanceKm: distance,
+            clientName: clientName,
+            clientEmail: _clientEmailController.text.trim().isNotEmpty
+                ? _clientEmailController.text.trim()
+                : null,
+            clientPhone: _clientPhoneController.text.trim().isNotEmpty
+                ? _clientPhoneController.text.trim()
+                : null,
+            originCoords: _originCoords,
+            destinationCoords: _destinationCoords,
+            priority: _selectedPriority,
+            vehicleType: _selectedVehicleType,
+            passengerCount: _passengerCount,
+            childSeats: _childSeats,
+            handLuggage: _handLuggage,
+            checkInLuggage: _checkInLuggage,
+            notes: notes.isNotEmpty ? notes : null,
+            scheduledDateTime: scheduledDateTime,
+          ),
+        ),
+      );
     }
   }
 
@@ -1932,63 +2346,49 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     return null;
   }
 
-  String? _validateCardNumber(String? value) {
+  String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'El número de tarjeta es requerido';
+      return 'Este campo es requerido';
     }
-    // Remove spaces and dashes
-    final cleaned = value.replaceAll(RegExp(r'[\s-]'), '');
-    if (cleaned.length < 13 || cleaned.length > 19) {
-      return 'Número de tarjeta inválido';
-    }
-    if (!RegExp(r'^\d+$').hasMatch(cleaned)) {
-      return 'Solo se permiten números';
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value)) {
+      return 'Ingrese un email válido';
     }
     return null;
   }
 
-  String? _validateCardExpiry(String? value) {
+  String? _validateRequiredDate(String? value) {
     if (value == null || value.isEmpty) {
-      return 'La fecha de expiración es requerida';
-    }
-    // Format: MM/YY
-    if (!RegExp(r'^\d{2}/\d{2}$').hasMatch(value)) {
-      return 'Formato: MM/YY';
-    }
-    final parts = value.split('/');
-    final month = int.tryParse(parts[0]);
-    final year = int.tryParse(parts[1]);
-    if (month == null || year == null || month < 1 || month > 12) {
-      return 'Fecha inválida';
+      return 'Este campo es requerido';
     }
     return null;
   }
 
-  String? _validateCardCvv(String? value) {
+  String? _validateRequiredTime(String? value) {
     if (value == null || value.isEmpty) {
-      return 'El CVV es requerido';
+      return 'Este campo es requerido';
     }
-    if (value.length < 3 || value.length > 4) {
-      return 'CVV debe tener 3 o 4 dígitos';
+    // Validar formato HH:mm
+    final timeRegex = RegExp(r'^([0-1]?[0-9]|2[0-3]):([0-5]?[0-9])$');
+    if (!timeRegex.hasMatch(value)) {
+      return 'Formato inválido. Use HH:mm (ej: 08:30)';
     }
-    if (!RegExp(r'^\d+$').hasMatch(value)) {
-      return 'Solo se permiten números';
+    final parts = value.split(':');
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) {
+      return 'Formato inválido';
+    }
+    if (hour < 0 || hour > 23) {
+      return 'La hora debe estar entre 00 y 23';
+    }
+    if (minute < 0 || minute > 59) {
+      return 'Los minutos deben estar entre 00 y 59';
     }
     return null;
   }
 
   // ========== Map and Address Methods ==========
-
-  void _enableInput(String type) {
-    setState(() {
-      _activeInputType = type;
-    });
-    if (type == 'origin') {
-      _originFocusNode.requestFocus();
-    } else {
-      _destinationFocusNode.requestFocus();
-    }
-  }
 
   void _selectFromMap(String type) {
     setState(() {
@@ -2028,86 +2428,212 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   }
 
   void _updateOriginMarker(LatLng point) {
+    if (kDebugMode) {
+      debugPrint(
+        '[RequestRideScreen] 📍 Actualizando marcador de origen: ${point.latitude}, ${point.longitude}',
+      );
+    }
     setState(() {
       _originMarker = Marker(
         point: point,
-        width: 40,
-        height: 40,
-        child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+        width: 50,
+        height: 50,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.red,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, spreadRadius: 2),
+            ],
+          ),
+          child: const Icon(Icons.location_on, color: Colors.white, size: 30),
+        ),
       );
     });
-    _centerMapOnPoints();
+    if (kDebugMode) {
+      debugPrint('[RequestRideScreen] ✅ Marcador de origen creado: $_originMarker');
+    }
+    // Forzar actualización del mapa después de crear el marcador
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 50), () {
+        _centerMapOnPoints();
+      });
+    });
   }
 
   void _updateDestinationMarker(LatLng point) {
+    if (kDebugMode) {
+      debugPrint(
+        '[RequestRideScreen] 🎯 Actualizando marcador de destino: ${point.latitude}, ${point.longitude}',
+      );
+    }
     setState(() {
       _destinationMarker = Marker(
         point: point,
-        width: 40,
-        height: 40,
-        child: const Icon(Icons.flag, color: Colors.green, size: 40),
+        width: 50,
+        height: 50,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.green,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, spreadRadius: 2),
+            ],
+          ),
+          child: const Icon(Icons.flag, color: Colors.white, size: 30),
+        ),
       );
     });
-    _centerMapOnPoints();
+    if (kDebugMode) {
+      debugPrint('[RequestRideScreen] ✅ Marcador de destino creado: $_destinationMarker');
+    }
+    // Forzar actualización del mapa después de crear el marcador
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 50), () {
+        _centerMapOnPoints();
+      });
+    });
   }
 
   void _centerMapOnPoints() {
-    if (_originCoords != null && _destinationCoords != null) {
-      final centerLat = (_originCoords!.latitude + _destinationCoords!.latitude) / 2;
-      final centerLon = (_originCoords!.longitude + _destinationCoords!.longitude) / 2;
-      final center = LatLng(centerLat, centerLon);
-
-      final distance = const Distance();
-      final distanceInKm = distance.as(LengthUnit.Kilometer, _originCoords!, _destinationCoords!);
-
-      double zoom;
-      if (distanceInKm < 1) {
-        zoom = 15.0;
-      } else if (distanceInKm < 5) {
-        zoom = 13.0;
-      } else if (distanceInKm < 20) {
-        zoom = 11.0;
-      } else if (distanceInKm < 50) {
-        zoom = 9.0;
-      } else {
-        zoom = 7.0;
+    // Verificar que el mapa esté listo antes de usar el MapController
+    if (!_isMapReady) {
+      if (kDebugMode) {
+        debugPrint('[RequestRideScreen] ⏳ Mapa aún no está listo, esperando...');
       }
+      // Reintentar después de un delay
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _centerMapOnPoints();
+        }
+      });
+      return;
+    }
 
-      _mapController.move(center, zoom);
-    } else if (_originCoords != null) {
-      _mapController.move(_originCoords!, 15.0);
-    } else if (_destinationCoords != null) {
-      _mapController.move(_destinationCoords!, 15.0);
+    if (kDebugMode) {
+      debugPrint(
+        '[RequestRideScreen] 🗺️ Centrando mapa - Origen: $_originCoords, Destino: $_destinationCoords',
+      );
+    }
+
+    try {
+      if (_originCoords != null && _destinationCoords != null) {
+        final centerLat = (_originCoords!.latitude + _destinationCoords!.latitude) / 2;
+        final centerLon = (_originCoords!.longitude + _destinationCoords!.longitude) / 2;
+        final center = LatLng(centerLat, centerLon);
+
+        // Usar la distancia real de la ruta si está disponible, sino calcular distancia en línea recta
+        double distanceInKm;
+        final distanceText = _distanceController.text.trim();
+        if (distanceText.isNotEmpty) {
+          final parsedDistance = double.tryParse(distanceText);
+          if (parsedDistance != null && parsedDistance > 0) {
+            distanceInKm = parsedDistance; // Usar distancia real de la ruta
+          } else {
+            // Si no hay distancia válida, calcular en línea recta
+            const distance = Distance();
+            distanceInKm = distance.as(LengthUnit.Kilometer, _originCoords!, _destinationCoords!);
+          }
+        } else {
+          // Si no hay distancia en el controlador, calcular en línea recta
+          const distance = Distance();
+          distanceInKm = distance.as(LengthUnit.Kilometer, _originCoords!, _destinationCoords!);
+        }
+
+        // Calcular zoom para asegurar que ambos marcadores sean visibles con margen
+        // Usar la distancia real de la ruta para un zoom más preciso
+        double zoom;
+        if (distanceInKm < 1) {
+          zoom = 15.0;
+        } else if (distanceInKm < 5) {
+          zoom = 13.0;
+        } else if (distanceInKm < 20) {
+          zoom = 11.0;
+        } else if (distanceInKm < 50) {
+          zoom = 9.0;
+        } else if (distanceInKm < 100) {
+          zoom = 10.5; // Zoom más cercano para rutas de 50-100 km (Syracuse-Catania ~65 km)
+        } else {
+          zoom = 9.0; // Zoom para distancias > 100 km
+        }
+
+        if (kDebugMode) {
+          debugPrint(
+            '[RequestRideScreen] 🗺️ Moviendo mapa a centro: $center, zoom: $zoom (distancia: ${distanceInKm.toStringAsFixed(2)} km)',
+          );
+        }
+        _mapController.move(center, zoom);
+      } else if (_originCoords != null) {
+        if (kDebugMode) {
+          debugPrint('[RequestRideScreen] 🗺️ Moviendo mapa a origen: $_originCoords');
+        }
+        _mapController.move(_originCoords!, 15.0);
+      } else if (_destinationCoords != null) {
+        if (kDebugMode) {
+          debugPrint('[RequestRideScreen] 🗺️ Moviendo mapa a destino: $_destinationCoords');
+        }
+        _mapController.move(_destinationCoords!, 15.0);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[RequestRideScreen] ❌ Error moviendo mapa: $e');
+      }
+      // Si hay error, el mapa aún no está listo, reintentar
+      _isMapReady = false;
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted) {
+          _centerMapOnPoints();
+        }
+      });
     }
   }
 
   Future<void> _onAddressInputChanged(String query, String type) async {
     _debounceTimer?.cancel();
 
+    // Activar automáticamente el campo cuando el usuario escribe
+    if (_activeInputType != type) {
+      setState(() {
+        _activeInputType = type;
+      });
+    }
+
     if (query.length < 2) {
       setState(() {
-        if (_activeInputType == type) {
-          _autocompleteResults = [];
-        }
+        _autocompleteResults = [];
       });
       return;
     }
 
-    setState(() {
-      _activeInputType = type;
-    });
+    if (kDebugMode) {
+      debugPrint('[RequestRideScreen] Buscando direcciones para: "$query" (type: $type)');
+    }
 
     _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
       try {
         final results = await _searchAddresses(query);
+        if (kDebugMode) {
+          debugPrint('[RequestRideScreen] Resultados recibidos: ${results.length}');
+        }
         if (mounted && _activeInputType == type) {
           setState(() {
             _autocompleteResults = results;
           });
+          if (kDebugMode) {
+            debugPrint(
+              '[RequestRideScreen] Autocompletado actualizado: ${results.length} resultados',
+            );
+          }
+        } else if (kDebugMode) {
+          debugPrint(
+            '[RequestRideScreen] No actualizando: mounted=$mounted, activeInputType=$_activeInputType, type=$type',
+          );
         }
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('Error buscando direcciones: $e');
+          debugPrint('[RequestRideScreen] Error buscando direcciones: $e');
         }
         if (mounted && _activeInputType == type) {
           setState(() {
@@ -2120,95 +2646,178 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
 
   Future<List<Map<String, dynamic>>> _searchAddresses(String query) async {
     try {
-      final uri = Uri.parse(
-        'https://nominatim.openstreetmap.org/search?'
-        'format=json&'
-        'q=${Uri.encodeComponent(query)}&'
-        'limit=10&'
-        'addressdetails=1&'
-        'extratags=1&'
-        'namedetails=1&'
-        'accept-language=es,en&'
-        'dedupe=1',
-      );
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'TaxiApp/1.0',
-          'Referer': 'https://nominatim.openstreetmap.org/',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        if (data.isEmpty) {
-          return [];
-        }
-
-        final results = data
-            .map(
-              (item) => {
-                'display_name': item['display_name'] as String? ?? '',
-                'lat': double.tryParse(item['lat'] as String? ?? '0') ?? 0.0,
-                'lon': double.tryParse(item['lon'] as String? ?? '0') ?? 0.0,
-                'importance': (item['importance'] as num?)?.toDouble() ?? 0.0,
-                'type': item['type'] as String? ?? '',
-                'class': item['class'] as String? ?? '',
-              },
-            )
-            .where((item) => item['lat'] != 0.0 && item['lon'] != 0.0)
-            .toList();
-
-        results.sort((a, b) {
-          final importanceA = a['importance'] as double;
-          final importanceB = b['importance'] as double;
-          return importanceB.compareTo(importanceA);
-        });
-
-        return results
-            .map(
-              (item) => {
-                'display_name': item['display_name'] as String,
-                'lat': item['lat'] as double,
-                'lon': item['lon'] as double,
-              },
-            )
-            .toList();
+      // Usar el servicio de autocompletado con fallback
+      final results = await AddressAutocompleteService.searchAddresses(query);
+      if (kDebugMode) {
+        debugPrint('[RequestRideScreen] Resultados encontrados: ${results.length}');
       }
-      return [];
+      return results;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Error en búsqueda de direcciones: $e');
+        debugPrint('[RequestRideScreen] Error en búsqueda de direcciones: $e');
       }
       return [];
     }
   }
 
   void _selectAddressFromAutocomplete(Map<String, dynamic> result, String type) {
-    final address = result['display_name'] as String;
-    final lat = result['lat'] as double;
-    final lon = result['lon'] as double;
+    final address = result['display_name'] as String? ?? '';
+
+    // Extraer coordenadas de forma segura (pueden venir como double, num, o String)
+    final latValue = result['lat'];
+    final lonValue = result['lon'];
+
+    double? lat;
+    double? lon;
+
+    if (latValue is double) {
+      lat = latValue;
+    } else if (latValue is num) {
+      lat = latValue.toDouble();
+    } else if (latValue is String) {
+      lat = double.tryParse(latValue);
+    }
+
+    if (lonValue is double) {
+      lon = lonValue;
+    } else if (lonValue is num) {
+      lon = lonValue.toDouble();
+    } else if (lonValue is String) {
+      lon = double.tryParse(lonValue);
+    }
+
+    if (lat == null || lon == null) {
+      if (kDebugMode) {
+        debugPrint('[RequestRideScreen] ⚠️ Coordenadas inválidas: lat=$latValue, lon=$lonValue');
+      }
+      return;
+    }
+
+    if (kDebugMode) {
+      debugPrint('[RequestRideScreen] ✅ Seleccionando dirección: $address');
+      debugPrint('[RequestRideScreen] Coordenadas: lat=$lat, lon=$lon');
+    }
+
     final point = LatLng(lat, lon);
 
+    // Obtener el texto actual del usuario antes de reemplazarlo
+    final currentText = type == 'origin' ? _originController.text : _destinationController.text;
+
+    // Si el usuario escribió una dirección más completa o detallada que el display_name,
+    // mantener su texto original. Esto preserva el formato que el usuario escribió.
+    final userTextLower = currentText.toLowerCase().trim();
+    final displayNameLower = address.toLowerCase().trim();
+
+    // Comparar si el texto del usuario contiene información más específica
+    // Si el texto del usuario es significativamente más largo o contiene más detalles,
+    // mantenerlo. De lo contrario, usar el display_name de la API.
+    bool shouldKeepUserText = false;
+
+    if (userTextLower.length > displayNameLower.length * 1.2) {
+      // El texto del usuario es significativamente más largo
+      shouldKeepUserText = true;
+    } else if (userTextLower.length > 30 &&
+        displayNameLower.contains(userTextLower.substring(0, 20))) {
+      // El texto del usuario es largo y el display_name contiene el inicio del texto del usuario
+      shouldKeepUserText = true;
+    } else if (userTextLower.split(' ').length > displayNameLower.split(' ').length + 2) {
+      // El texto del usuario tiene significativamente más palabras
+      shouldKeepUserText = true;
+    }
+
+    final finalAddress = shouldKeepUserText ? currentText : address;
+
     if (type == 'origin') {
-      _originController.text = address;
+      _originController.text = finalAddress;
       _originCoords = point;
       _updateOriginMarker(point);
+      if (kDebugMode) {
+        debugPrint(
+          '[RequestRideScreen] ✅ Origen actualizado: ${_originCoords?.latitude}, ${_originCoords?.longitude}',
+        );
+      }
     } else {
-      _destinationController.text = address;
+      _destinationController.text = finalAddress;
       _destinationCoords = point;
       _updateDestinationMarker(point);
+      if (kDebugMode) {
+        debugPrint(
+          '[RequestRideScreen] ✅ Destino actualizado: ${_destinationCoords?.latitude}, ${_destinationCoords?.longitude}',
+        );
+      }
     }
 
     setState(() {
       _autocompleteResults = [];
-      _activeInputType = null;
+      _activeInputType = null; // Cerrar el modo de edición después de seleccionar
     });
 
-    if (_originCoords != null && _destinationCoords != null) {
-      _calculateRoute();
+    // Forzar actualización del mapa después de actualizar los marcadores
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Actualizar el mapa para mostrar los marcadores
+      if (_originCoords != null || _destinationCoords != null) {
+        _centerMapOnPoints();
+      }
+
+      // Calcular ruta si ambos puntos están establecidos
+      if (_originCoords != null && _destinationCoords != null) {
+        if (kDebugMode) {
+          debugPrint('[RequestRideScreen] 🗺️ Calculando ruta entre origen y destino...');
+        }
+        _calculateRoute();
+      } else if (kDebugMode) {
+        debugPrint(
+          '[RequestRideScreen] ⏳ Esperando ${type == 'origin' ? 'destino' : 'origen'} para calcular ruta',
+        );
+      }
+    });
+  }
+
+  Future<void> _geocodeAddress(String address, String type) async {
+    if (address.trim().length < 3) return;
+
+    if (kDebugMode) {
+      debugPrint('[RequestRideScreen] 🔍 Geocodificando dirección: "$address" (type: $type)');
+    }
+
+    try {
+      // Usar el servicio de autocompletado para buscar la dirección
+      final results = await AddressAutocompleteService.searchAddresses(address);
+
+      if (results.isNotEmpty) {
+        // Tomar el primer resultado (el más relevante)
+        final result = results[0];
+        if (kDebugMode) {
+          debugPrint('[RequestRideScreen] ✅ Dirección geocodificada: ${result['display_name']}');
+        }
+        // Seleccionar automáticamente el primer resultado
+        _selectAddressFromAutocomplete(result, type);
+      } else {
+        if (kDebugMode) {
+          debugPrint('[RequestRideScreen] ⚠️ No se encontraron resultados para: "$address"');
+        }
+        // Mostrar mensaje al usuario
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No se pudo encontrar la dirección: $address'),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[RequestRideScreen] ❌ Error geocodificando dirección: $e');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al buscar la dirección: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -2234,13 +2843,32 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   }
 
   Future<void> _calculateRoute() async {
-    if (_originCoords == null || _destinationCoords == null) return;
+    if (_originCoords == null || _destinationCoords == null) {
+      if (kDebugMode) {
+        debugPrint(
+          '[RequestRideScreen] ⚠️ No se puede calcular ruta: origen=$_originCoords, destino=$_destinationCoords',
+        );
+      }
+      return;
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        '[RequestRideScreen] 🗺️ Calculando ruta desde ${_originCoords!.latitude},${_originCoords!.longitude} hasta ${_destinationCoords!.latitude},${_destinationCoords!.longitude}',
+      );
+    }
 
     try {
       // Calcular distancia directa
       final distance = const Distance();
       final distanceInKm = distance.as(LengthUnit.Kilometer, _originCoords!, _destinationCoords!);
       _distanceController.text = distanceInKm.toStringAsFixed(2);
+
+      if (kDebugMode) {
+        debugPrint(
+          '[RequestRideScreen] 📏 Distancia directa: ${distanceInKm.toStringAsFixed(2)} km',
+        );
+      }
 
       // Intentar obtener ruta real usando OSRM
       try {
@@ -2279,9 +2907,9 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                 _routePolyline = Polyline(points: points, strokeWidth: 4.0, color: Colors.blue);
               });
 
-              // Recalcular precio con la distancia real
-              _recalculatePriceForVehicleType();
-              _updateMapBounds();
+              // Recalcular precio usando rutas predefinidas
+              _recalculatePriceForVehicleType(forceRecalculate: true);
+              _centerMapOnPoints();
               return;
             }
           }
@@ -2293,6 +2921,15 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
       }
 
       // Fallback: línea recta si OSRM falla
+      // Calcular distancia en línea recta
+      const distanceCalculator = Distance();
+      final distanceInKmStraight = distanceCalculator.as(
+        LengthUnit.Kilometer,
+        _originCoords!,
+        _destinationCoords!,
+      );
+      _distanceController.text = distanceInKmStraight.toStringAsFixed(2);
+
       setState(() {
         _routePolyline = Polyline(
           points: [_originCoords!, _destinationCoords!],
@@ -2301,9 +2938,9 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
         );
       });
 
-      // Recalcular precio
-      _recalculatePriceForVehicleType();
-      _updateMapBounds();
+      // Recalcular precio usando rutas predefinidas (siempre recalcular para asegurar que se muestre)
+      await _recalculatePriceForVehicleType(forceRecalculate: true);
+      _centerMapOnPoints();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Error calculando ruta: $e');
@@ -2312,75 +2949,78 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   }
 
   /// Recalcula el precio basado en la distancia y el tipo de vehículo
-  void _recalculatePriceForVehicleType() {
-    if (_originCoords == null || _destinationCoords == null) return;
-
-    final distanceText = _distanceController.text;
-    if (distanceText.isEmpty) return;
-
-    final distanceInKm = double.tryParse(distanceText) ?? 0.0;
-    if (distanceInKm <= 0) return;
-
-    // Precios base por tipo de vehículo (por km)
-    final vehiclePrices = {
-      'sedan': 0.5,
-      'business': 0.7,
-      'van': 0.9,
-      'luxury': 1.2,
-      'minibus_8pax': 1.0,
-      'bus_16pax': 1.5,
-      'bus_19pax': 1.8,
-      'bus_50pax': 2.5,
-    };
-
-    final pricePerKm = vehiclePrices[_selectedVehicleType] ?? 0.5;
-    final calculatedPrice = distanceInKm * pricePerKm;
-
-    // Precio mínimo según tipo de vehículo
-    final minPrices = {
-      'sedan': 2.0,
-      'business': 3.0,
-      'van': 4.0,
-      'luxury': 5.0,
-      'minibus_8pax': 6.0,
-      'bus_16pax': 10.0,
-      'bus_19pax': 12.0,
-      'bus_50pax': 15.0,
-    };
-
-    final minPrice = minPrices[_selectedVehicleType] ?? 2.0;
-    final finalPrice = calculatedPrice < minPrice ? minPrice : calculatedPrice;
-
-    setState(() {
-      _priceController.text = finalPrice.toStringAsFixed(2);
-    });
-  }
-
-  /// Actualiza los límites del mapa para mostrar la ruta completa
-  void _updateMapBounds() {
-    if (_originCoords == null || _destinationCoords == null) return;
-
-    try {
-      final centerLat = (_originCoords!.latitude + _destinationCoords!.latitude) / 2;
-      final centerLon = (_originCoords!.longitude + _destinationCoords!.longitude) / 2;
-      final center = LatLng(centerLat, centerLon);
-
-      // Calcular zoom apropiado basado en la distancia
-      final distance = const Distance();
-      final distanceInKm = distance.as(LengthUnit.Kilometer, _originCoords!, _destinationCoords!);
-      double zoom = 13.0;
-      if (distanceInKm > 50) {
-        zoom = 10.0;
-      } else if (distanceInKm > 20) {
-        zoom = 11.0;
-      } else if (distanceInKm > 10) {
-        zoom = 12.0;
-      }
-
-      _mapController.move(center, zoom);
-    } catch (e) {
+  Future<void> _recalculatePriceForVehicleType({bool forceRecalculate = false}) async {
+    if (_originCoords == null || _destinationCoords == null) {
       if (kDebugMode) {
-        debugPrint('Error actualizando límites del mapa: $e');
+        debugPrint('[RequestRideScreen] ⚠️ No se puede calcular precio: origen o destino faltante');
+      }
+      return;
+    }
+
+    // Si hay precio inicial y no se fuerza recalcular, mantenerlo (pero asegurar que se muestre)
+    if (widget.initialEstimatedPrice != null && !forceRecalculate) {
+      if (_priceController.text.isEmpty) {
+        setState(() {
+          _priceController.text = widget.initialEstimatedPrice!.toStringAsFixed(2);
+        });
+      }
+      return;
+    }
+
+    // Usar RideCalculationService que incluye rutas predefinidas y lugares con precio fijo
+    final price = await RideCalculationService.calculatePriceWithFixedPlaces(
+      _originCoords,
+      _destinationCoords,
+      vehicleType: _selectedVehicleType,
+    );
+
+    if (price != null) {
+      if (kDebugMode) {
+        debugPrint('[RequestRideScreen] 💰 Precio calculado: $price para $_selectedVehicleType');
+      }
+      setState(() {
+        _priceController.text = price.toStringAsFixed(2);
+      });
+    } else {
+      // Fallback: calcular basado en distancia si no hay precio predefinido
+      final distanceText = _distanceController.text;
+      if (distanceText.isNotEmpty) {
+        final distanceInKm = double.tryParse(distanceText) ?? 0.0;
+        if (distanceInKm > 0) {
+          // Precios base por tipo de vehículo (por km) - solo como fallback
+          final vehiclePrices = {
+            'sedan': 0.5,
+            'business': 0.7,
+            'van': 0.9,
+            'luxury': 1.2,
+            'minibus_8pax': 1.0,
+            'bus_16pax': 1.5,
+            'bus_19pax': 1.8,
+            'bus_50pax': 2.5,
+          };
+
+          final pricePerKm = vehiclePrices[_selectedVehicleType] ?? 0.5;
+          final calculatedPrice = distanceInKm * pricePerKm;
+
+          // Precio mínimo según tipo de vehículo
+          final minPrices = {
+            'sedan': 2.0,
+            'business': 3.0,
+            'van': 4.0,
+            'luxury': 5.0,
+            'minibus_8pax': 6.0,
+            'bus_16pax': 10.0,
+            'bus_19pax': 12.0,
+            'bus_50pax': 15.0,
+          };
+
+          final minPrice = minPrices[_selectedVehicleType] ?? 2.0;
+          final finalPrice = calculatedPrice < minPrice ? minPrice : calculatedPrice;
+
+          setState(() {
+            _priceController.text = finalPrice.toStringAsFixed(2);
+          });
+        }
       }
     }
   }
@@ -3148,62 +3788,6 @@ class _TimeInputFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: cleaned,
       selection: TextSelection.collapsed(offset: cleaned.length),
-    );
-  }
-}
-
-// Custom formatters for card input
-class _CardNumberFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    final text = newValue.text;
-    if (text.isEmpty) {
-      return newValue;
-    }
-
-    // Remove all non-digits
-    final digitsOnly = text.replaceAll(RegExp(r'[^\d]'), '');
-
-    // Add space every 4 digits
-    final buffer = StringBuffer();
-    for (int i = 0; i < digitsOnly.length; i++) {
-      if (i > 0 && i % 4 == 0) {
-        buffer.write(' ');
-      }
-      buffer.write(digitsOnly[i]);
-    }
-
-    final formatted = buffer.toString();
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
-
-class _CardExpiryFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    final text = newValue.text;
-    if (text.isEmpty) {
-      return newValue;
-    }
-
-    // Remove all non-digits
-    final digitsOnly = text.replaceAll(RegExp(r'[^\d]'), '');
-
-    // Limit to 4 digits
-    final limited = digitsOnly.length > 4 ? digitsOnly.substring(0, 4) : digitsOnly;
-
-    // Format as MM/YY
-    String formatted = limited;
-    if (limited.length >= 2) {
-      formatted = '${limited.substring(0, 2)}/${limited.substring(2)}';
-    }
-
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

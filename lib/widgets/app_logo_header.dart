@@ -1,13 +1,20 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Widget reutilizable que muestra el logo flotante y transparente
 /// que se sobrepone sobre el contenido
 /// El logo está fijado en una posición absoluta que NO se mueve con el scroll
+/// Solo se muestra en web (kIsWeb)
 class AppLogoHeader extends StatelessWidget {
   const AppLogoHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Solo mostrar el logo en web
+    if (!kIsWeb) {
+      return const SizedBox.shrink();
+    }
+
     return Positioned(
       // Posición fija absoluta que NO cambia con el scroll o contenido
       // Estos valores son fijos y no dependen del tamaño del Stack

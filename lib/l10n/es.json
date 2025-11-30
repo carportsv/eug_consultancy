@@ -34,7 +34,8 @@
     "select": "Seleccionar",
     "verifiedDrivers": "Conductores verificados",
     "createAccount": "Crear cuenta",
-    "accountRequiredMessage": "Necesitas crear una cuenta para solicitar viajes. ¿Deseas crear una cuenta ahora?"
+    "loginOrCreateAccount": "Iniciar sesión / Crear cuenta",
+    "accountRequiredMessage": "Necesitas iniciar sesión o crear una cuenta para solicitar viajes."
   },
   "auth": {
     "register": "Regístrate",

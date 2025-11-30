@@ -20,6 +20,7 @@ class LocationInputField extends StatelessWidget {
   final List<Map<String, dynamic>> autocompleteResults;
   final Function(String, String) onAddressInputChanged;
   final Function(Map<String, dynamic>, String) onSelectAddress;
+  final Function(String, String)? onGeocodeAddress; // Callback opcional para geocodificar
 
   const LocationInputField({
     super.key,
@@ -31,6 +32,7 @@ class LocationInputField extends StatelessWidget {
     required this.autocompleteResults,
     required this.onAddressInputChanged,
     required this.onSelectAddress,
+    this.onGeocodeAddress,
   });
 
   @override
@@ -117,40 +119,63 @@ class LocationInputField extends StatelessWidget {
               onAddressInputChanged(value, fieldType);
             },
             onEditingComplete: () {
-              // Cuando el usuario presiona "siguiente" o "enter"
+              // Cuando el usuario presiona Enter, intentar geocodificar la dirección
+              final address = controller.text.trim();
+              if (address.isNotEmpty && address.length >= 3) {
+                onGeocodeAddress?.call(address, fieldType);
+              }
+              focusNode.unfocus();
+            },
+            onFieldSubmitted: (value) {
+              // Cuando el usuario presiona Enter, intentar geocodificar la dirección
+              final address = value.trim();
+              if (address.isNotEmpty && address.length >= 3) {
+                onGeocodeAddress?.call(address, fieldType);
+              }
               focusNode.unfocus();
             },
           ),
           // Lista de resultados de autocompletado
           if (autocompleteResults.isNotEmpty && isActive)
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.95), // Más opaco para mejor visibilidad
-                border: Border.all(color: _kPrimaryColor.withValues(alpha: 0.3)),
-                borderRadius: BorderRadius.circular(_kBorderRadius),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              constraints: const BoxConstraints(maxHeight: 250),
-              child: ListView.builder(
-                shrinkWrap: true,
-                physics:
-                    const ClampingScrollPhysics(), // Mejor para móvil dentro de SingleChildScrollView
-                itemCount: autocompleteResults.length,
-                itemBuilder: (context, index) {
-                  final result = autocompleteResults[index];
-                  return AutocompleteItem(
-                    result: result,
-                    type: fieldType,
-                    onTap: () => onSelectAddress(result, fieldType),
-                  );
-                },
+            Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(_kBorderRadius),
+              child: Container(
+                margin: const EdgeInsets.only(top: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.95), // Más opaco para mejor visibilidad
+                  border: Border.all(color: _kPrimaryColor.withValues(alpha: 0.3)),
+                  borderRadius: BorderRadius.circular(_kBorderRadius),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                constraints: const BoxConstraints(maxHeight: 250),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics:
+                      const ClampingScrollPhysics(), // Mejor para móvil dentro de SingleChildScrollView
+                  itemCount: autocompleteResults.length,
+                  itemBuilder: (context, index) {
+                    final result = autocompleteResults[index];
+                    // Debug: verificar que el resultado tenga display_name
+                    if (kDebugMode) {
+                      final displayName = result['display_name'] as String? ?? '';
+                      debugPrint(
+                        '[LocationInputField] Construyendo item $index: display_name="$displayName"',
+                      );
+                    }
+                    return AutocompleteItem(
+                      result: result,
+                      type: fieldType,
+                      onTap: () => onSelectAddress(result, fieldType),
+                    );
+                  },
+                ),
               ),
             ),
         ],

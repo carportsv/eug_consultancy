@@ -34,7 +34,8 @@
     "select": "Seleziona",
     "verifiedDrivers": "Autisti verificati",
     "createAccount": "Crea account",
-    "accountRequiredMessage": "Devi creare un account per richiedere corse. Vuoi creare un account ora?"
+    "loginOrCreateAccount": "Accedi / Crea account",
+    "accountRequiredMessage": "Devi accedere o creare un account per richiedere corse."
   },
   "auth": {
     "register": "Registrati",

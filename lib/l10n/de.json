@@ -34,7 +34,8 @@
     "select": "Auswählen",
     "verifiedDrivers": "Verifizierte Fahrer",
     "createAccount": "Konto erstellen",
-    "accountRequiredMessage": "Sie müssen ein Konto erstellen, um Fahrten anzufordern. Möchten Sie jetzt ein Konto erstellen?"
+    "loginOrCreateAccount": "Anmelden / Konto erstellen",
+    "accountRequiredMessage": "Sie müssen sich anmelden oder ein Konto erstellen, um Fahrten anzufordern."
   },
   "auth": {
     "register": "Registrieren",
