@@ -28,11 +28,18 @@ void main() async {
       debugPrint('✅ Variables de entorno cargadas exitosamente desde env');
     }
   } catch (e) {
-    debugPrint('❌ Error cargando variables de entorno: ${e.toString()}');
-    debugPrint('⚠️ La app continuará, pero puede fallar la inicialización de Firebase/Supabase');
+    // En Flutter Web, si el asset no se encuentra, continuar sin bloquear la app
+    // Esto permite que la app funcione aunque el archivo env no esté disponible
     if (kDebugMode) {
+      debugPrint('⚠️ No se pudo cargar el archivo env: ${e.toString()}');
+      debugPrint('⚠️ La app continuará, pero puede fallar la inicialización de Firebase/Supabase');
       debugPrint('💡 Asegúrate de que el archivo "env" existe en la raíz y está en pubspec.yaml');
+      debugPrint(
+        '💡 Si estás en desarrollo, ejecuta: flutter clean && flutter pub get && flutter run',
+      );
     }
+    // No marcar como cargado, pero permitir que la app continúe
+    envLoaded = false;
   }
 
   // Initialize Firebase solo si las variables de entorno están cargadas

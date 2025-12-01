@@ -26,10 +26,22 @@ class AppLocalizations {
     try {
       jsonString = await rootBundle.loadString('lib/l10n/${locale.languageCode}.json');
     } catch (e) {
-      // Si no existe el archivo, usar español como fallback
-      jsonString = await rootBundle.loadString('lib/l10n/es.json');
+      // Si no existe el archivo, intentar usar español como fallback
+      try {
+        jsonString = await rootBundle.loadString('lib/l10n/es.json');
+      } catch (e2) {
+        // Si tampoco existe español, usar un mapa vacío para evitar que la app se bloquee
+        // Esto permite que la app funcione aunque los archivos de localización no estén disponibles
+        _localizedStrings = <String, dynamic>{};
+        return true;
+      }
     }
-    _localizedStrings = json.decode(jsonString);
+    try {
+      _localizedStrings = json.decode(jsonString);
+    } catch (e) {
+      // Si hay un error al decodificar JSON, usar un mapa vacío
+      _localizedStrings = <String, dynamic>{};
+    }
     return true;
   }
 
