@@ -214,7 +214,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
                     // Imagen de fondo
                     Positioned.fill(
                       child: Image.asset(
-                        'images/empresa/pared.png',
+                        'assets/images/empresa/pared.png',
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
@@ -314,7 +314,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(_kBorderRadius),
               child: Image.asset(
-                'images/empresa/oficina.png',
+                'assets/images/empresa/oficina.png',
                 fit: BoxFit.cover,
                 height: 350,
                 errorBuilder: (context, error, stackTrace) {
