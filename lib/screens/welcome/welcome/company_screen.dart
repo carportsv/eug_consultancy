@@ -287,7 +287,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
             ],
           ),
           // Logo flotante
-          const AppLogoHeader(),
+          AppLogoHeader(onTap: _navigateToWelcomePath),
         ],
       ),
     );

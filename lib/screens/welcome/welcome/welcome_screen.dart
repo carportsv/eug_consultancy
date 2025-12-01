@@ -609,7 +609,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
             ],
           ),
-          const AppLogoHeader(),
+          AppLogoHeader(onTap: _navigateToWelcomePath),
         ],
       ),
     );

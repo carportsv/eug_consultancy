@@ -301,7 +301,7 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
             ),
           ),
           // Logo flotante
-          const AppLogoHeader(),
+          AppLogoHeader(onTap: _navigateToWelcomePath),
         ],
       ),
     );

@@ -282,7 +282,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
             ),
           ),
           // Logo flotante
-          const AppLogoHeader(),
+          AppLogoHeader(onTap: _navigateToWelcomePath),
         ],
       ),
     );
@@ -407,7 +407,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
               width: isTablet ? 70 : 56,
               height: isTablet ? 70 : 56,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: Colors.white.withValues(alpha: 0.25),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: Colors.white, size: isTablet ? 36 : 28),
