@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:web/web.dart' as web;
 import '../../../l10n/app_localizations.dart';
+import '../../../services/pdf_receipt_service.dart';
 
 // Constants
 const _kPrimaryColor = Color(0xFF1D4ED8);
@@ -20,6 +21,7 @@ class ReceiptScreen extends StatelessWidget {
   final double totalAmount;
   final String? originAddress;
   final String? destinationAddress;
+  final String? flightNumber;
   final String? vehicleType;
   final String? clientName;
   final String? clientEmail;
@@ -27,9 +29,12 @@ class ReceiptScreen extends StatelessWidget {
   final double? distanceKm;
   final int? passengerCount;
   final int? childSeats;
+  final int? handLuggage;
+  final int? checkInLuggage;
   final DateTime? scheduledDate;
   final String? scheduledTime;
   final String? paymentMethod;
+  final String? notes;
 
   const ReceiptScreen({
     super.key,
@@ -39,6 +44,7 @@ class ReceiptScreen extends StatelessWidget {
     required this.totalAmount,
     this.originAddress,
     this.destinationAddress,
+    this.flightNumber,
     this.vehicleType,
     this.clientName,
     this.clientEmail,
@@ -46,9 +52,12 @@ class ReceiptScreen extends StatelessWidget {
     this.distanceKm,
     this.passengerCount,
     this.childSeats,
+    this.handLuggage,
+    this.checkInLuggage,
     this.scheduledDate,
     this.scheduledTime,
     this.paymentMethod,
+    this.notes,
   });
 
   void _handlePrint() {
@@ -304,6 +313,85 @@ class ReceiptScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _handleGeneratePdf(BuildContext context) async {
+    try {
+      final l10n = AppLocalizations.of(context);
+      
+      // Preparar traducciones para el PDF
+      final translations = {
+        'receiptNumber': l10n?.receiptNumber ?? 'Recibo N°',
+        'receiptDate': l10n?.receiptDate ?? 'Fecha',
+        'tripDetails': l10n?.receiptTripDetails ?? 'DETALLES DEL VIAJE',
+        'origin': l10n?.summaryOrigin ?? 'Origen',
+        'destination': l10n?.summaryDestination ?? 'Destino',
+        'flightNumber': l10n?.summaryFlightNumber ?? 'Número de vuelo',
+        'distance': l10n?.summaryDistance ?? 'Distancia',
+        'vehicleType': l10n?.formVehicleType ?? 'Tipo de Vehículo',
+        'passengers': l10n?.summaryPassengers ?? 'Pasajeros',
+        'childSeats': l10n?.summaryChildSeats ?? 'Asientos para Niños',
+        'handLuggage': l10n?.summaryHandLuggage ?? 'Equipaje de Mano',
+        'checkInLuggage': l10n?.summaryCheckInLuggage ?? 'Equipaje de Bodega',
+        'dateTime': l10n?.summaryDateTime ?? 'Fecha y Hora',
+        'clientInfo': l10n?.receiptClientInfo ?? 'INFORMACIÓN DEL CLIENTE',
+        'passengerName': l10n?.summaryPassengerName ?? 'Nombre del Pasajero',
+        'contactNumber': l10n?.summaryContactNumber ?? 'Número de Contacto',
+        'email': l10n?.receiptEmail ?? 'Email',
+        'paymentSummary': l10n?.receiptPaymentSummary ?? 'RESUMEN DE PAGO',
+        'paymentMethod': l10n?.summaryPaymentMethod ?? 'Método de Pago',
+        'subtotal': l10n?.receiptSubtotal ?? 'Subtotal',
+        'total': l10n?.receiptTotal ?? 'TOTAL',
+        'status': l10n?.receiptStatus ?? 'Estado',
+        'paid': l10n?.receiptPaid ?? 'Pagado',
+        'notes': l10n?.formAdditionalNotes ?? 'Notas Adicionales',
+        'thankYou': l10n?.receiptThankYou ?? '¡Gracias por elegir nuestros servicios!',
+      };
+
+      await PdfReceiptService.generateAndPrintReceipt(
+        receiptNumber: receiptNumber,
+        receiptDate: receiptDate,
+        originAddress: originAddress ?? '',
+        destinationAddress: destinationAddress ?? '',
+        flightNumber: flightNumber,
+        distanceKm: distanceKm,
+        vehicleType: vehicleType ?? '',
+        passengers: passengerCount ?? 0,
+        childSeats: childSeats ?? 0,
+        handLuggage: handLuggage ?? 0,
+        checkInLuggage: checkInLuggage ?? 0,
+        passengerName: clientName ?? '',
+        contactNumber: clientPhone,
+        email: clientEmail,
+        scheduledDateTime: scheduledDate != null && scheduledTime != null
+            ? DateTime(
+                scheduledDate!.year,
+                scheduledDate!.month,
+                scheduledDate!.day,
+                int.tryParse(scheduledTime!.split(':')[0]) ?? 0,
+                int.tryParse(scheduledTime!.split(':')[1]) ?? 0,
+              )
+            : null,
+        paymentMethod: paymentMethod ?? '',
+        subtotal: totalAmount,
+        total: totalAmount,
+        notes: notes,
+        translations: translations,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ReceiptScreen] Error generando PDF: $e');
+      }
+      // Mostrar error al usuario
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al generar PDF: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -351,6 +439,24 @@ class ReceiptScreen extends StatelessWidget {
             ),
             onPressed: _handlePrint,
             tooltip: 'Imprimir',
+          ),
+          const SizedBox(width: 8),
+          Builder(
+            builder: (context) {
+              final l10n = AppLocalizations.of(context);
+              return IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                ),
+                onPressed: () => _handleGeneratePdf(context),
+                tooltip: l10n?.downloadPdf ?? 'Descargar PDF',
+              );
+            },
           ),
           const SizedBox(width: 8),
         ],

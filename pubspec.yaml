@@ -45,6 +45,10 @@ dependencies:
   # QR Code
   qr_flutter: ^4.1.0
   
+  # PDF Generation and Printing
+  pdf: ^3.11.1
+  printing: ^5.13.2
+  
   # URL Launcher
   url_launcher: ^6.3.1
   
@@ -83,6 +87,11 @@ flutter:
     - assets/images/destinos/destination_3.jpg
     - assets/images/destinos/destination_4.jpg
     - assets/images/destinos/destination_5.jpg
+    - assets/images/destinos/bergamo.png
+    - assets/images/destinos/catania.png
+    - assets/images/destinos/linate.jpg
+    - assets/images/destinos/palermo.png
+    - assets/images/destinos/torino.png
     - lib/l10n/es.json
     - lib/l10n/en.json
     - lib/l10n/it.json

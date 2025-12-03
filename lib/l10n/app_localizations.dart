@@ -80,16 +80,13 @@ class AppLocalizations {
   String get login => translate('auth.login');
   String get logout => translate('auth.logout');
   String get myProfile => translate('auth.myProfile');
+  String get downloadPdf => translate('auth.downloadPdf');
   String get featuresTitle => translate('features.title');
   String get featurePayment => translate('features.payment');
   String get featureSafety => translate('features.safety');
   String get featureAvailability => translate('features.availability');
   String get featureSupport => translate('features.support');
-  String get vehicleEconomy => translate('vehicles.economy');
   String get vehicleSedan => translate('vehicles.sedan');
-  String get vehicleSUV => translate('vehicles.suv');
-  String get vehicleVan => translate('vehicles.van');
-  String get vehicleLuxury => translate('vehicles.luxury');
   String get vehicleBusiness => translate('vehicles.business');
   String get vehicleMinivan7pax => translate('vehicles.minivan7pax');
   String get vehicleMinivanLuxury6pax => translate('vehicles.minivanLuxury6pax');
@@ -107,11 +104,14 @@ class AppLocalizations {
   String get estimatedPrice => translate('form.estimatedPrice');
   String get accountRequired => translate('auth.accountRequired');
   String get quickBooking => translate('features.quickBooking');
-  String get vehicleEconomyDesc => translate('vehicles.economyDesc');
   String get vehicleSedanDesc => translate('vehicles.sedanDesc');
-  String get vehicleSUVDesc => translate('vehicles.suvDesc');
-  String get vehicleVanDesc => translate('vehicles.vanDesc');
-  String get vehicleLuxuryDesc => translate('vehicles.luxuryDesc');
+  String get vehicleBusinessDesc => translate('vehicles.businessDesc');
+  String get vehicleMinivan7paxDesc => translate('vehicles.minivan7paxDesc');
+  String get vehicleMinivanLuxury6paxDesc => translate('vehicles.minivanLuxury6paxDesc');
+  String get vehicleMinibus8paxDesc => translate('vehicles.minibus8paxDesc');
+  String get vehicleBus16paxDesc => translate('vehicles.bus16paxDesc');
+  String get vehicleBus19paxDesc => translate('vehicles.bus19paxDesc');
+  String get vehicleBus50paxDesc => translate('vehicles.bus50paxDesc');
   String get cancel => translate('form.cancel');
   String get select => translate('form.select');
   String get verifiedDrivers => translate('form.verifiedDrivers');
@@ -192,6 +192,16 @@ class AppLocalizations {
   String get destinationsBolognaCenter => translate('destinations.bologna.center');
   String get destinationsPisaAirport => translate('destinations.pisa.airport');
   String get destinationsPisaCenter => translate('destinations.pisa.center');
+  String get destinationsBergamoAirport => translate('destinations.bergamo.airport');
+  String get destinationsBergamoCenter => translate('destinations.bergamo.center');
+  String get destinationsCataniaAirport => translate('destinations.catania.airport');
+  String get destinationsCataniaCenter => translate('destinations.catania.center');
+  String get destinationsLinateAirport => translate('destinations.linate.airport');
+  String get destinationsLinateCenter => translate('destinations.linate.center');
+  String get destinationsPalermoAirport => translate('destinations.palermo.airport');
+  String get destinationsPalermoCenter => translate('destinations.palermo.center');
+  String get destinationsTorinoAirport => translate('destinations.torino.airport');
+  String get destinationsTorinoCenter => translate('destinations.torino.center');
 
   // TimePicker
   String get timePickerSelectTime => translate('timePicker.selectTime');
@@ -259,6 +269,8 @@ class AppLocalizations {
   String get formDestination => translate('form.destination');
   String get formOriginRequired => translate('form.originRequired');
   String get formDestinationRequired => translate('form.destinationRequired');
+  String get formFlightNumber => translate('form.flightNumber');
+  String get formFlightNumberHint => translate('form.flightNumberHint');
   String get formPassenger => translate('form.passenger');
   String get formPassengers => translate('form.passengers');
   String get formHandLuggage => translate('form.handLuggage');
@@ -298,6 +310,7 @@ class AppLocalizations {
   // Summary
   String get summaryOrigin => translate('summary.origin');
   String get summaryDestination => translate('summary.destination');
+  String get summaryFlightNumber => translate('summary.flightNumber');
   String get summaryDistance => translate('summary.distance');
   String get summaryPassengers => translate('summary.passengers');
   String get summaryChildSeats => translate('summary.childSeats');

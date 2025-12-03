@@ -19,7 +19,8 @@
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión",
     "myProfile": "Mi Perfil",
-    "accountRequired": "Cuenta requerida"
+    "accountRequired": "Cuenta requerida",
+    "downloadPdf": "Descargar PDF"
   },
   "features": {
     "title": "Características",
@@ -43,11 +44,7 @@
     }
   },
   "vehicles": {
-    "economy": "Económica",
-    "sedan": "Sedán",
-    "suv": "SUV",
-    "van": "Van",
-    "luxury": "Lujo",
+    "sedan": "Sedan",
     "business": "Business",
     "minivan7pax": "Minivan 7pax",
     "minivanLuxury6pax": "Minivan Luxury 6pax",
@@ -60,11 +57,14 @@
     "premium": "Experiencia premium",
     "luggage": "Equipajes",
     "passengers": "Pasajeros",
-    "economyDesc": "Ideal para viajes cortos",
     "sedanDesc": "Cómodo y confortable",
-    "suvDesc": "Espacioso para grupos",
-    "vanDesc": "Perfecto para grupos grandes",
-    "luxuryDesc": "Experiencia premium"
+    "businessDesc": "Clase ejecutiva",
+    "minivan7paxDesc": "Ideal para grupos medianos",
+    "minivanLuxury6paxDesc": "Confort premium para grupos",
+    "minibus8paxDesc": "Perfecto para grupos",
+    "bus16paxDesc": "Para grupos grandes",
+    "bus19paxDesc": "Capacidad extendida",
+    "bus50paxDesc": "Para eventos y excursiones"
   },
   "services": {
     "intro": "Eugenia Travel Consultancy Taxi es el sitio web líder de reserva de taxis que ha estado ayudando a turistas y residentes a encontrar servicios de transporte al aeropuerto confiables. Hemos estado trabajando en el mercado durante muchos años, entendemos las necesidades y demandas de los clientes y también las expectativas de los conductores de taxis.",
@@ -148,6 +148,26 @@
     "pisa": {
       "airport": "Aeropuerto de Pisa",
       "center": "Pisa Centro"
+    },
+    "bergamo": {
+      "airport": "Aeropuerto de Bérgamo",
+      "center": "Bérgamo Centro"
+    },
+    "catania": {
+      "airport": "Aeropuerto de Catania",
+      "center": "Catania Centro"
+    },
+    "linate": {
+      "airport": "Aeropuerto de Milán Linate",
+      "center": "Linate Centro"
+    },
+    "palermo": {
+      "airport": "Aeropuerto de Palermo",
+      "center": "Palermo Centro"
+    },
+    "torino": {
+      "airport": "Aeropuerto de Turín",
+      "center": "Turín Centro"
     }
   },
   "timePicker": {
@@ -214,6 +234,8 @@
     "destination": "Destino",
     "originRequired": "Origen *",
     "destinationRequired": "Destino *",
+    "flightNumber": "Número de vuelo (opcional)",
+    "flightNumberHint": "Ej: IB1234",
     "passenger": "Pasajero",
     "passengers": "Pasajeros",
     "handLuggage": "Equipaje de mano",
@@ -268,6 +290,7 @@
   "summary": {
     "origin": "Origen",
     "destination": "Destino",
+    "flightNumber": "Número de vuelo",
     "distance": "Distancia",
     "passengers": "Pasajeros",
     "childSeats": "Asientos para Niños",

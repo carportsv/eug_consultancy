@@ -38,6 +38,8 @@
     "accountRequiredMessage": "Sie müssen sich anmelden oder ein Konto erstellen, um Fahrten anzufordern.",
     "originRequired": "Ursprung *",
     "destinationRequired": "Ziel *",
+    "flightNumber": "Flugnummer (optional)",
+    "flightNumberHint": "Z.B: IB1234",
     "handLuggage": "Handgepäck",
     "checkInLuggage": "Aufgegebenes Gepäck",
     "childSeats": "Kindersitze",
@@ -53,7 +55,8 @@
     "login": "Anmelden",
     "logout": "Abmelden",
     "myProfile": "Mein Profil",
-    "accountRequired": "Konto erforderlich"
+    "accountRequired": "Konto erforderlich",
+    "downloadPdf": "PDF herunterladen"
   },
   "features": {
     "title": "Funktionen",
@@ -77,11 +80,7 @@
     }
   },
   "vehicles": {
-    "economy": "Wirtschaft",
-    "sedan": "Limousine",
-    "suv": "SUV",
-    "van": "Van",
-    "luxury": "Luxus",
+    "sedan": "Sedan",
     "business": "Business",
     "minivan7pax": "Minivan 7pax",
     "minivanLuxury6pax": "Minivan Luxury 6pax",
@@ -94,11 +93,14 @@
     "premium": "Premium-Erlebnis",
     "luggage": "Gepäck",
     "passengers": "Passagiere",
-    "economyDesc": "Ideal für kurze Fahrten",
     "sedanDesc": "Komfortabel und gemütlich",
-    "suvDesc": "Geräumig für Gruppen",
-    "vanDesc": "Perfekt für große Gruppen",
-    "luxuryDesc": "Premium-Erlebnis"
+    "businessDesc": "Executive-Klasse",
+    "minivan7paxDesc": "Ideal für mittelgroße Gruppen",
+    "minivanLuxury6paxDesc": "Premium-Komfort für Gruppen",
+    "minibus8paxDesc": "Perfekt für Gruppen",
+    "bus16paxDesc": "Für große Gruppen",
+    "bus19paxDesc": "Erweiterte Kapazität",
+    "bus50paxDesc": "Für Veranstaltungen und Ausflüge"
   },
   "services": {
     "intro": "Eugenia Travel Consultancy Taxi ist die führende Taxi-Buchungswebsite, die Touristen und Einwohnern hilft, zuverlässige Flughafentransportdienste zu finden. Wir arbeiten seit vielen Jahren auf dem Markt und verstehen die Bedürfnisse und Anforderungen der Kunden sowie die Erwartungen der Taxifahrer.",
@@ -206,6 +208,26 @@
     "pisa": {
       "airport": "Flughafen Pisa",
       "center": "Pisa Zentrum"
+    },
+    "bergamo": {
+      "airport": "Flughafen Bergamo",
+      "center": "Bergamo Zentrum"
+    },
+    "catania": {
+      "airport": "Flughafen Catania",
+      "center": "Catania Zentrum"
+    },
+    "linate": {
+      "airport": "Flughafen Mailand Linate",
+      "center": "Linate Zentrum"
+    },
+    "palermo": {
+      "airport": "Flughafen Palermo",
+      "center": "Palermo Zentrum"
+    },
+    "torino": {
+      "airport": "Flughafen Turin",
+      "center": "Turin Zentrum"
     }
   },
   "timePicker": {
@@ -269,6 +291,7 @@
   "summary": {
     "origin": "Ursprung",
     "destination": "Ziel",
+    "flightNumber": "Flugnummer",
     "distance": "Entfernung",
     "passengers": "Passagiere",
     "childSeats": "Kindersitze",

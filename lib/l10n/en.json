@@ -38,6 +38,8 @@
     "accountRequiredMessage": "You need to sign in or create an account to request rides.",
     "originRequired": "Origin *",
     "destinationRequired": "Destination *",
+    "flightNumber": "Flight number (optional)",
+    "flightNumberHint": "E.g: IB1234",
     "handLuggage": "Hand Luggage",
     "checkInLuggage": "Check-in Luggage",
     "childSeats": "Child Seats",
@@ -53,7 +55,8 @@
     "login": "Sign in",
     "logout": "Sign out",
     "myProfile": "My Profile",
-    "accountRequired": "Account required"
+    "accountRequired": "Account required",
+    "downloadPdf": "Download PDF"
   },
   "features": {
     "title": "Features",
@@ -77,11 +80,7 @@
     }
   },
   "vehicles": {
-    "economy": "Economy",
     "sedan": "Sedan",
-    "suv": "SUV",
-    "van": "Van",
-    "luxury": "Luxury",
     "business": "Business",
     "minivan7pax": "Minivan 7pax",
     "minivanLuxury6pax": "Minivan Luxury 6pax",
@@ -94,11 +93,14 @@
     "premium": "Premium experience",
     "luggage": "Luggage",
     "passengers": "Passengers",
-    "economyDesc": "Ideal for short trips",
     "sedanDesc": "Comfortable and cozy",
-    "suvDesc": "Spacious for groups",
-    "vanDesc": "Perfect for large groups",
-    "luxuryDesc": "Premium experience"
+    "businessDesc": "Executive class",
+    "minivan7paxDesc": "Ideal for medium groups",
+    "minivanLuxury6paxDesc": "Premium comfort for groups",
+    "minibus8paxDesc": "Perfect for groups",
+    "bus16paxDesc": "For large groups",
+    "bus19paxDesc": "Extended capacity",
+    "bus50paxDesc": "For events and excursions"
   },
   "services": {
     "intro": "Eugenia Travel Consultancy Taxi is the leading taxi booking website that has been helping tourists and residents to find reliable airport transport services. We have been working in the market for many years, we understand the needs & demands of customers and also the expectations of taxi drivers.",
@@ -188,6 +190,26 @@
     "pisa": {
       "airport": "Pisa Airport",
       "center": "Pisa Center"
+    },
+    "bergamo": {
+      "airport": "Bergamo Airport",
+      "center": "Bergamo Center"
+    },
+    "catania": {
+      "airport": "Catania Airport",
+      "center": "Catania Center"
+    },
+    "linate": {
+      "airport": "Milan Linate Airport",
+      "center": "Linate Center"
+    },
+    "palermo": {
+      "airport": "Palermo Airport",
+      "center": "Palermo Center"
+    },
+    "torino": {
+      "airport": "Turin Airport",
+      "center": "Turin Center"
     }
   },
   "timePicker": {
@@ -278,6 +300,7 @@
   "summary": {
     "origin": "Origin",
     "destination": "Destination",
+    "flightNumber": "Flight number",
     "distance": "Distance",
     "passengers": "Passengers",
     "childSeats": "Child Seats",

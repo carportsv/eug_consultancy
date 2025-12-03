@@ -874,17 +874,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   ),
                 ),
                 const SizedBox(width: _kSpacing * 2),
-                // Contenedor 2: Derecha - Carrusel
+                // Contenedor 2: Derecha - Carrusel centrado y más abajo
                 Expanded(
                   flex: 1,
                   child: Container(
                     padding: EdgeInsets.only(
-                      top: 0,
+                      top: _kSpacing * 4,
                       bottom: _kSpacing * 2,
                       left: _kSpacing * 2,
                       right: _kSpacing * 2,
                     ),
-                    child: SizedBox(height: 425, child: VehicleCarousel(vehicles: _vehicles)),
+                    child: Center(
+                      child: SizedBox(height: 425, child: VehicleCarousel(vehicles: _vehicles)),
+                    ),
                   ),
                 ),
               ],

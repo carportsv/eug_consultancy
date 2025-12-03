@@ -51,6 +51,36 @@ final List<Map<String, dynamic>> _destinationsData = [
     'image': 'assets/images/destinos/destination_5.jpg',
     'rating': 4,
   },
+  {
+    'name': 'Bergamo',
+    'key': 'bergamo',
+    'image': 'assets/images/destinos/bergamo.png',
+    'rating': 4,
+  },
+  {
+    'name': 'Catania',
+    'key': 'catania',
+    'image': 'assets/images/destinos/catania.png',
+    'rating': 4,
+  },
+  {
+    'name': 'Milano Linate',
+    'key': 'linate',
+    'image': 'assets/images/destinos/linate.jpg',
+    'rating': 4,
+  },
+  {
+    'name': 'Palermo',
+    'key': 'palermo',
+    'image': 'assets/images/destinos/palermo.png',
+    'rating': 4,
+  },
+  {
+    'name': 'Torino',
+    'key': 'torino',
+    'image': 'assets/images/destinos/torino.png',
+    'rating': 4,
+  },
 ];
 
 List<Map<String, dynamic>> _getDestinations(AppLocalizations? l10n) {
@@ -90,6 +120,26 @@ List<Map<String, dynamic>> _getDestinations(AppLocalizations? l10n) {
       case 'pisa':
         airport = l10n.destinationsPisaAirport;
         center = l10n.destinationsPisaCenter;
+        break;
+      case 'bergamo':
+        airport = l10n.destinationsBergamoAirport;
+        center = l10n.destinationsBergamoCenter;
+        break;
+      case 'catania':
+        airport = l10n.destinationsCataniaAirport;
+        center = l10n.destinationsCataniaCenter;
+        break;
+      case 'linate':
+        airport = l10n.destinationsLinateAirport;
+        center = l10n.destinationsLinateCenter;
+        break;
+      case 'palermo':
+        airport = l10n.destinationsPalermoAirport;
+        center = l10n.destinationsPalermoCenter;
+        break;
+      case 'torino':
+        airport = l10n.destinationsTorinoAirport;
+        center = l10n.destinationsTorinoCenter;
         break;
       default:
         airport = 'Aeroporto di ${dest['name']}';
@@ -422,40 +472,57 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
           );
         }
 
-        // En tablet: layout de 5 columnas, una por destino
-        // Columnas 2 y 4 (índices 1 y 3) tienen info arriba, imagen abajo
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (int i = 0; i < destinations.length; i++) ...[
-                if (i > 0) const SizedBox(width: _kSpacing * 1.5),
-                Expanded(
-                  flex: 1,
-                  child: _buildDestinationCard(
-                    destinations[i],
-                    reverseOrder: i == 1 || i == 3, // Milano (1) y Bologna (3)
-                  ),
+        // En tablet: layout de 5 columnas con 2 filas
+        // Primera fila: 5 destinos
+        // Segunda fila: 5 destinos
+        // Todas las tarjetas tienen imagen arriba y texto abajo
+        return Column(
+          children: [
+            // Primera fila - 5 destinos
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (int i = 0; i < 5 && i < destinations.length; i++) ...[
+                    if (i > 0) const SizedBox(width: _kSpacing * 1.5),
+                    Expanded(
+                      flex: 1,
+                      child: _buildDestinationCard(destinations[i]),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (destinations.length > 5) ...[
+              const SizedBox(height: _kSpacing * 2),
+              // Segunda fila - 5 destinos restantes
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (int i = 5; i < destinations.length; i++) ...[
+                      if (i > 5) const SizedBox(width: _kSpacing * 1.5),
+                      Expanded(
+                        flex: 1,
+                        child: _buildDestinationCard(destinations[i]),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildDestinationCard(Map<String, dynamic> destination, {bool reverseOrder = false}) {
+  Widget _buildDestinationCard(Map<String, dynamic> destination) {
     final imageWidget = ClipRRect(
-      borderRadius: reverseOrder
-          ? const BorderRadius.only(
-              bottomLeft: Radius.circular(_kBorderRadius),
-              bottomRight: Radius.circular(_kBorderRadius),
-            )
-          : const BorderRadius.only(
-              topLeft: Radius.circular(_kBorderRadius),
-              topRight: Radius.circular(_kBorderRadius),
-            ),
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(_kBorderRadius),
+        topRight: Radius.circular(_kBorderRadius),
+      ),
       child: Image.asset(
         destination['image'] as String,
         fit: BoxFit.cover,
@@ -577,19 +644,12 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: reverseOrder
-            ? [
-                // Contenido arriba
-                contentWidget,
-                // Imagen abajo
-                imageWidget,
-              ]
-            : [
-                // Imagen arriba
-                imageWidget,
-                // Contenido abajo
-                contentWidget,
-              ],
+        children: [
+          // Imagen siempre arriba
+          imageWidget,
+          // Contenido siempre abajo
+          contentWidget,
+        ],
       ),
     );
   }

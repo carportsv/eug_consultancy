@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../../l10n/app_localizations.dart';
-import 'vehicle_info_chip.dart';
 import 'vehicle_translations.dart';
 
 // Constants
@@ -101,45 +100,34 @@ class VehicleCarouselItem extends StatelessWidget {
                   colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
                 ),
               ),
-              child: Builder(
-                builder: (context) {
-                  final l10n = AppLocalizations.of(context);
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Builder(
+                    builder: (context) {
+                      return Text(
                         VehicleTranslations.getVehicleName(vehicle['key'] as String, context),
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Builder(
+                    builder: (context) {
+                      return Text(
                         VehicleTranslations.getVehicleDescription(
                           vehicle['descriptionKey'] as String,
                           context,
                         ),
                         style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.9)),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          VehicleInfoChip(
-                            icon: Icons.people,
-                            text: '${vehicle['passengers']} ${l10n?.passengers ?? 'Pasajeros'}',
-                          ),
-                          const SizedBox(width: 12),
-                          VehicleInfoChip(
-                            icon: Icons.luggage,
-                            text: '${vehicle['luggage']} ${l10n?.vehicleLuggage ?? 'Equipajes'}',
-                          ),
-                        ],
-                      ),
-                    ],
-                  );
-                },
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ),

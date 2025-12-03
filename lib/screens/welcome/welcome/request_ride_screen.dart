@@ -62,6 +62,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
   // Form Controllers
   final _originController = TextEditingController();
   final _destinationController = TextEditingController();
+  final _flightNumberController = TextEditingController();
   final _priceController = TextEditingController();
   final _distanceController = TextEditingController();
   final _clientNameController = TextEditingController();
@@ -387,6 +388,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     // Dispose all controllers
     _originController.dispose();
     _destinationController.dispose();
+    _flightNumberController.dispose();
     _priceController.dispose();
     _distanceController.dispose();
     _clientNameController.dispose();
@@ -1094,6 +1096,21 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
             icon: Icons.flag,
             type: 'destination',
             validator: _validateRequiredField,
+          ),
+
+          const SizedBox(height: _kSpacing),
+          TextFormField(
+            controller: _flightNumberController,
+            decoration: InputDecoration(
+              labelText:
+                  AppLocalizations.of(context)?.formFlightNumber ?? 'Número de vuelo (opcional)',
+              hintText: AppLocalizations.of(context)?.formFlightNumberHint ?? 'Ej: IB1234',
+              prefixIcon: const Icon(Icons.flight),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            textCapitalization: TextCapitalization.characters,
           ),
 
           // Vehicle Details Section
@@ -2267,6 +2284,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
     // Clear all form fields
     _originController.clear();
     _destinationController.clear();
+    _flightNumberController.clear();
     _priceController.clear();
     _distanceController.clear();
     _clientNameController.clear();
@@ -2414,6 +2432,9 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
           builder: (context) => PaymentConfirmationScreen(
             originAddress: originAddress,
             destinationAddress: destinationAddress,
+            flightNumber: _flightNumberController.text.trim().isNotEmpty
+                ? _flightNumberController.text.trim()
+                : null,
             price: price,
             distanceKm: distance,
             clientName: clientName,

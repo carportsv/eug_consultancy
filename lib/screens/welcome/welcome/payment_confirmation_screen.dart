@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:qr_flutter/qr_flutter.dart' as qr;
 import 'package:web/web.dart' as web;
 import '../../../auth/login_screen.dart';
@@ -24,6 +23,7 @@ const _kBorderRadius = 12.0;
 class PaymentConfirmationScreen extends StatefulWidget {
   final String originAddress;
   final String destinationAddress;
+  final String? flightNumber;
   final double price;
   final double? distanceKm;
   final String clientName;
@@ -44,6 +44,7 @@ class PaymentConfirmationScreen extends StatefulWidget {
     super.key,
     required this.originAddress,
     required this.destinationAddress,
+    this.flightNumber,
     required this.price,
     this.distanceKm,
     required this.clientName,
@@ -79,18 +80,10 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
   bool _isProcessing = false;
   String? _paymentError;
   StreamSubscription<User?>? _authSubscription;
-  String _selectedPaymentMethod = 'card'; // 'card', 'paypal', 'apple_pay', 'google_pay', 'transfer'
+  String _selectedPaymentMethod = 'card'; // 'card', 'paypal', 'apple_pay', 'google_pay'
   String? _cardType; // 'visa', 'mastercard', null
 
   final RideService _rideService = RideService();
-
-  // Datos bancarios desde variables de entorno
-  String get _bankAccountName =>
-      dotenv.env['BANK_ACCOUNT_NAME'] ?? 'Eugenia\'s Travel - La Sicilia Tour';
-  String get _bankIban => dotenv.env['BANK_IBAN'] ?? 'IT60X0542811101000000123456';
-  String get _bankName => dotenv.env['BANK_NAME'] ?? 'Banca Popolare di Sicilia';
-  String get _bankSwift => dotenv.env['BANK_SWIFT'] ?? '';
-  String get _bankAddress => dotenv.env['BANK_ADDRESS'] ?? '';
 
   @override
   void initState() {
@@ -337,6 +330,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                 totalAmount: widget.price,
                 originAddress: widget.originAddress,
                 destinationAddress: widget.destinationAddress,
+                flightNumber: widget.flightNumber,
                 vehicleType: widget.vehicleType,
                 clientName: widget.clientName,
                 clientEmail: widget.clientEmail,
@@ -344,6 +338,8 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                 distanceKm: widget.distanceKm,
                 passengerCount: widget.passengerCount,
                 childSeats: widget.childSeats,
+                handLuggage: widget.handLuggage,
+                checkInLuggage: widget.checkInLuggage,
                 scheduledDate: widget.scheduledDateTime,
                 scheduledTime: widget.scheduledDateTime != null
                     ? DateFormat('HH:mm').format(widget.scheduledDateTime!)
@@ -353,6 +349,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                         _selectedPaymentMethod == 'google_pay')
                     ? 'wallet'
                     : _selectedPaymentMethod,
+                notes: widget.notes,
               ),
             ),
           );
@@ -403,6 +400,9 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
     buffer.writeln('');
     buffer.writeln('${l10n?.summaryOrigin ?? 'Origen'}: ${widget.originAddress}');
     buffer.writeln('${l10n?.summaryDestination ?? 'Destino'}: ${widget.destinationAddress}');
+    if (widget.flightNumber != null && widget.flightNumber!.isNotEmpty) {
+      buffer.writeln('${l10n?.summaryFlightNumber ?? 'Número de vuelo'}: ${widget.flightNumber}');
+    }
     if (widget.distanceKm != null) {
       buffer.writeln(
         '${l10n?.summaryDistance ?? 'Distancia'}: ${widget.distanceKm!.toStringAsFixed(2)} km',
@@ -489,8 +489,6 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
             // Información Apple Pay / Google Pay (solo si se selecciona)
             if (_selectedPaymentMethod == 'apple_pay' || _selectedPaymentMethod == 'google_pay')
               _buildWalletInfo(),
-            // Información bancaria (solo si se selecciona depósito a cuenta)
-            if (_selectedPaymentMethod == 'transfer') _buildBankTransferInfo(),
             if (_paymentError != null) ...[const SizedBox(height: _kSpacing), _buildErrorBanner()],
             const SizedBox(height: _kSpacing * 2),
             // Botones de acción
@@ -602,6 +600,11 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                     l10n?.summaryDestination ?? 'Destino',
                     widget.destinationAddress,
                   ),
+                  if (widget.flightNumber != null && widget.flightNumber!.isNotEmpty)
+                    _buildSummaryRow(
+                      l10n?.summaryFlightNumber ?? 'Número de vuelo',
+                      widget.flightNumber!,
+                    ),
                   if (widget.distanceKm != null)
                     _buildSummaryRow(
                       l10n?.summaryDistance ?? 'Distancia',
@@ -877,21 +880,6 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                     'Google',
                     Icons.account_balance_wallet,
                     _selectedPaymentMethod == 'google_pay',
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 1,
-                  child: Builder(
-                    builder: (context) {
-                      final l10n = AppLocalizations.of(context);
-                      return _buildPaymentMethodOption(
-                        'transfer',
-                        l10n?.paymentDeposit ?? 'Depósito',
-                        Icons.account_balance,
-                        _selectedPaymentMethod == 'transfer',
-                      );
-                    },
                   ),
                 ),
               ],
@@ -1406,139 +1394,6 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
         child: const Center(child: Icon(Icons.qr_code, size: 100, color: Colors.grey)),
       );
     }
-  }
-
-  Widget _buildBankTransferInfo() {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 500),
-        padding: const EdgeInsets.all(_kSpacing * 2),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(_kBorderRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.account_balance, color: _kPrimaryColor, size: 24),
-                const SizedBox(width: 8),
-                Text(
-                  'Información para Transferencia',
-                  style: GoogleFonts.exo(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: _kTextColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: _kSpacing * 1.5),
-            _buildBankInfoRow('Beneficiario', _bankAccountName),
-            const SizedBox(height: _kSpacing),
-            _buildBankInfoRow('IBAN', _formatIban(_bankIban)),
-            const SizedBox(height: _kSpacing),
-            _buildBankInfoRow('Banco', _bankName),
-            if (_bankSwift.isNotEmpty) ...[
-              const SizedBox(height: _kSpacing),
-              _buildBankInfoRow('SWIFT/BIC', _bankSwift),
-            ],
-            if (_bankAddress.isNotEmpty) ...[
-              const SizedBox(height: _kSpacing),
-              _buildBankInfoRow('Dirección', _bankAddress),
-            ],
-            const SizedBox(height: _kSpacing * 1.5),
-            Container(
-              padding: const EdgeInsets.all(_kSpacing),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(_kBorderRadius),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Importante:',
-                          style: GoogleFonts.exo(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange.shade900,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '• Use el número de recibo como concepto en la transferencia\n'
-                          '• Confirme cuando haya realizado el pago\n'
-                          '• El viaje se confirmará una vez verificado el depósito',
-                          style: GoogleFonts.exo(
-                            fontSize: 13,
-                            color: Colors.orange.shade800,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBankInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            '$label:',
-            style: GoogleFonts.exo(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
-            ),
-          ),
-        ),
-        Expanded(
-          child: SelectableText(
-            value,
-            style: GoogleFonts.exo(fontSize: 14, fontWeight: FontWeight.w500, color: _kTextColor),
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _formatIban(String iban) {
-    // Formatear IBAN con espacios cada 4 caracteres para mejor legibilidad
-    final cleaned = iban.replaceAll(' ', '');
-    final buffer = StringBuffer();
-    for (int i = 0; i < cleaned.length; i++) {
-      if (i > 0 && i % 4 == 0) {
-        buffer.write(' ');
-      }
-      buffer.write(cleaned[i]);
-    }
-    return buffer.toString();
   }
 
   Widget _buildTextFormField({

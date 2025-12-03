@@ -14,12 +14,12 @@
       "prices": {
         "sedan": 60.0,
         "business": 80.0,
-        "van": 90.0,
-        "luxury": 120.0,
-        "minibus_8pax": 100.0,
-        "bus_16pax": 350.0,
-        "bus_19pax": 450.0,
-        "bus_50pax": 550.0
+        "minivan7pax": 90.0,
+        "minivanLuxury6pax": 120.0,
+        "minibus8pax": 100.0,
+        "bus16pax": 350.0,
+        "bus19pax": 450.0,
+        "bus50pax": 550.0
       }
     },
     {
@@ -36,12 +36,12 @@
       "prices": {
         "sedan": 110.0,
         "business": 150.0,
-        "van": 140.0,
-        "luxury": 180.0,
-        "minibus_8pax": 160.0,
-        "bus_16pax": 350.0,
-        "bus_19pax": 450.0,
-        "bus_50pax": 550.0
+        "minivan7pax": 140.0,
+        "minivanLuxury6pax": 180.0,
+        "minibus8pax": 160.0,
+        "bus16pax": 350.0,
+        "bus19pax": 450.0,
+        "bus50pax": 550.0
       }
     },
     {
@@ -58,12 +58,12 @@
       "prices": {
         "sedan": 50.0,
         "business": 70.0,
-        "van": 70.0,
-        "luxury": 100.0,
-        "minibus_8pax": 80.0,
-        "bus_16pax": 350.0,
-        "bus_19pax": 450.0,
-        "bus_50pax": 550.0
+        "minivan7pax": 70.0,
+        "minivanLuxury6pax": 100.0,
+        "minibus8pax": 80.0,
+        "bus16pax": 350.0,
+        "bus19pax": 450.0,
+        "bus50pax": 550.0
       }
     },
     {
@@ -80,12 +80,12 @@
       "prices": {
         "sedan": 100.0,
         "business": 120.0,
-        "van": 150.0,
-        "luxury": 180.0,
-        "minibus_8pax": 160.0,
-        "bus_16pax": 350.0,
-        "bus_19pax": 450.0,
-        "bus_50pax": 550.0
+        "minivan7pax": 150.0,
+        "minivanLuxury6pax": 180.0,
+        "minibus8pax": 160.0,
+        "bus16pax": 350.0,
+        "bus19pax": 450.0,
+        "bus50pax": 550.0
       }
     },
     {
@@ -102,12 +102,12 @@
       "prices": {
         "sedan": 100.0,
         "business": 120.0,
-        "van": 150.0,
-        "luxury": 180.0,
-        "minibus_8pax": 160.0,
-        "bus_16pax": 350.0,
-        "bus_19pax": 450.0,
-        "bus_50pax": 550.0
+        "minivan7pax": 150.0,
+        "minivanLuxury6pax": 180.0,
+        "minibus8pax": 160.0,
+        "bus16pax": 350.0,
+        "bus19pax": 450.0,
+        "bus50pax": 550.0
       }
     },
     {
@@ -124,12 +124,12 @@
       "prices": {
         "sedan": 60.0,
         "business": 70.0,
-        "van": 80.0,
-        "luxury": 90.0,
-        "minibus_8pax": 80.0,
-        "bus_16pax": 450.0,
-        "bus_19pax": 500.0,
-        "bus_50pax": 550.0
+        "minivan7pax": 80.0,
+        "minivanLuxury6pax": 90.0,
+        "minibus8pax": 80.0,
+        "bus16pax": 450.0,
+        "bus19pax": 500.0,
+        "bus50pax": 550.0
       }
     },
     {
@@ -146,12 +146,12 @@
       "prices": {
         "sedan": 60.0,
         "business": 70.0,
-        "van": 80.0,
-        "luxury": 90.0,
-        "minibus_8pax": 80.0,
-        "bus_16pax": 450.0,
-        "bus_19pax": 500.0,
-        "bus_50pax": 550.0
+        "minivan7pax": 80.0,
+        "minivanLuxury6pax": 90.0,
+        "minibus8pax": 80.0,
+        "bus16pax": 450.0,
+        "bus19pax": 500.0,
+        "bus50pax": 550.0
       }
     },
     {
@@ -168,12 +168,12 @@
       "prices": {
         "sedan": 60.0,
         "business": 70.0,
-        "van": 80.0,
-        "luxury": 90.0,
-        "minibus_8pax": 80.0,
-        "bus_16pax": 450.0,
-        "bus_19pax": 500.0,
-        "bus_50pax": 550.0
+        "minivan7pax": 80.0,
+        "minivanLuxury6pax": 90.0,
+        "minibus8pax": 80.0,
+        "bus16pax": 450.0,
+        "bus19pax": 500.0,
+        "bus50pax": 550.0
       }
     },
     {
@@ -190,12 +190,207 @@
       "prices": {
         "sedan": 90.0,
         "business": 120.0,
-        "van": 120.0,
-        "luxury": 180.0,
-        "minibus_8pax": 120.0,
-        "bus_16pax": 550.0,
-        "bus_19pax": 600.0,
-        "bus_50pax": 650.0
+        "minivan7pax": 120.0,
+        "minivanLuxury6pax": 180.0,
+        "minibus8pax": 120.0,
+        "bus16pax": 550.0,
+        "bus19pax": 600.0,
+        "bus50pax": 650.0
+      }
+    },
+    {
+      "origin": {
+        "name": "Aeroporto Orio al Serio",
+        "lat": 45.6739,
+        "lon": 9.7042
+      },
+      "destination": {
+        "name": "Centro Milano",
+        "lat": 45.4642,
+        "lon": 9.1900
+      },
+      "prices": {
+        "sedan": 150.0,
+        "business": 180.0,
+        "minivan7pax": 190.0,
+        "minivanLuxury6pax": 220.0,
+        "minibus8pax": 190.0,
+        "bus16pax": 450.0,
+        "bus19pax": 550.0,
+        "bus50pax": 650.0
+      }
+    },
+    {
+      "origin": {
+        "name": "Aeroporto Torino",
+        "lat": 45.2008,
+        "lon": 7.6497
+      },
+      "destination": {
+        "name": "Centro Torino",
+        "lat": 45.0703,
+        "lon": 7.6869
+      },
+      "prices": {
+        "sedan": 70.0,
+        "business": 80.0,
+        "minivan7pax": 90.0,
+        "minivanLuxury6pax": 100.0,
+        "minibus8pax": 90.0,
+        "bus16pax": 450.0,
+        "bus19pax": 550.0,
+        "bus50pax": 650.0
+      }
+    },
+    {
+      "origin": {
+        "name": "Aeroporto Roma Fiumicino",
+        "lat": 41.8003,
+        "lon": 12.2389
+      },
+      "destination": {
+        "name": "Centro Roma",
+        "lat": 41.9028,
+        "lon": 12.4964
+      },
+      "prices": {
+        "sedan": 70.0,
+        "business": 80.0,
+        "minivan7pax": 90.0,
+        "minivanLuxury6pax": 100.0,
+        "minibus8pax": 90.0,
+        "bus16pax": 450.0,
+        "bus19pax": 550.0,
+        "bus50pax": 650.0
+      }
+    },
+    {
+      "origin": {
+        "name": "Aeroporto Roma Fiumicino",
+        "lat": 41.8003,
+        "lon": 12.2389
+      },
+      "destination": {
+        "name": "Civitavecchia",
+        "lat": 42.0942,
+        "lon": 11.7964
+      },
+      "prices": {
+        "sedan": 180.0,
+        "business": 200.0,
+        "minivan7pax": 200.0,
+        "minivanLuxury6pax": 250.0,
+        "minibus8pax": 240.0,
+        "bus16pax": 800.0,
+        "bus19pax": 1000.0,
+        "bus50pax": 1200.0
+      }
+    },
+    {
+      "origin": {
+        "name": "Aeroporto Perugia",
+        "lat": 43.0959,
+        "lon": 12.5133
+      },
+      "destination": {
+        "name": "Perugia Centro",
+        "lat": 43.1107,
+        "lon": 12.3908
+      },
+      "prices": {
+        "sedan": 70.0,
+        "business": 120.0,
+        "minivan7pax": 90.0,
+        "minivanLuxury6pax": 150.0,
+        "minibus8pax": 90.0,
+        "bus16pax": 400.0,
+        "bus19pax": 500.0,
+        "bus50pax": 1000.0
+      }
+    },
+    {
+      "origin": {
+        "name": "Aeroporto Bari",
+        "lat": 41.1389,
+        "lon": 16.7606
+      },
+      "destination": {
+        "name": "Centro Bari",
+        "lat": 41.1171,
+        "lon": 16.8719
+      },
+      "prices": {
+        "sedan": 70.0,
+        "business": 80.0,
+        "minivan7pax": 90.0,
+        "minivanLuxury6pax": 100.0,
+        "minibus8pax": 90.0,
+        "bus16pax": 450.0,
+        "bus19pax": 550.0,
+        "bus50pax": 650.0
+      }
+    },
+    {
+      "origin": {
+        "name": "Aeroporto Ancona",
+        "lat": 43.6163,
+        "lon": 13.3623
+      },
+      "destination": {
+        "name": "Centro Ancona",
+        "lat": 43.6158,
+        "lon": 13.5189
+      },
+      "prices": {
+        "sedan": 70.0,
+        "business": 90.0,
+        "minivan7pax": 100.0,
+        "minibus8pax": 110.0,
+        "bus16pax": 550.0,
+        "bus19pax": 650.0,
+        "bus50pax": 950.0
+      }
+    },
+    {
+      "origin": {
+        "name": "Aeroporto Trapani",
+        "lat": 37.9114,
+        "lon": 12.4880
+      },
+      "destination": {
+        "name": "Centro Trapani",
+        "lat": 38.0176,
+        "lon": 12.5365
+      },
+      "prices": {
+        "sedan": 70.0,
+        "business": 90.0,
+        "minivan7pax": 90.0,
+        "minibus8pax": 90.0,
+        "bus16pax": 450.0,
+        "bus19pax": 550.0,
+        "bus50pax": 650.0
+      }
+    },
+    {
+      "origin": {
+        "name": "Aeroporto Comiso",
+        "lat": 36.9946,
+        "lon": 14.6072
+      },
+      "destination": {
+        "name": "Centro Comiso",
+        "lat": 36.9488,
+        "lon": 14.6080
+      },
+      "prices": {
+        "sedan": 70.0,
+        "business": 90.0,
+        "minivan7pax": 90.0,
+        "minibus8pax": 90.0,
+        "bus16pax": 450.0,
+        "bus19pax": 550.0,
+        "bus50pax": 650.0
       }
     }
   ]
