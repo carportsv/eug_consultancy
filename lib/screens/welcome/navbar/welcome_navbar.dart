@@ -26,6 +26,9 @@ class WelcomeNavbar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onNavigateToAbout;
   final VoidCallback? onNavigateToDestination;
   final VoidCallback? onNavigateToContacts;
+  final VoidCallback? onNavigateToTours;
+  final VoidCallback? onNavigateToWeddings;
+  final VoidCallback? onNavigateToTerms;
 
   const WelcomeNavbar({
     super.key,
@@ -39,6 +42,9 @@ class WelcomeNavbar extends StatelessWidget implements PreferredSizeWidget {
     this.onNavigateToAbout,
     this.onNavigateToDestination,
     this.onNavigateToContacts,
+    this.onNavigateToTours,
+    this.onNavigateToWeddings,
+    this.onNavigateToTerms,
   });
 
   @override
@@ -141,6 +147,15 @@ class WelcomeNavbar extends StatelessWidget implements PreferredSizeWidget {
           final navContacts = (l10n != null && !l10n.navContacts.startsWith('nav.'))
               ? l10n.navContacts
               : 'Contactos';
+          final navTours = (l10n != null && !l10n.navTours.startsWith('nav.'))
+              ? l10n.navTours
+              : 'Tours';
+          final navWeddings = (l10n != null && !l10n.navWeddings.startsWith('nav.'))
+              ? l10n.navWeddings
+              : 'Bodas';
+          final navTerms = (l10n != null && !l10n.navTerms.startsWith('nav.'))
+              ? l10n.navTerms
+              : 'Términos';
 
           return Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -241,6 +256,27 @@ class WelcomeNavbar extends StatelessWidget implements PreferredSizeWidget {
                       '[WelcomeNavbar] ⚠️ onNavigateToContacts es null, no se puede navegar',
                     );
                   }
+                }
+              }),
+              const SizedBox(width: 20),
+              // Tours
+              _buildNavItem(navTours, () {
+                if (onNavigateToTours != null) {
+                  onNavigateToTours!();
+                }
+              }),
+              const SizedBox(width: 20),
+              // Bodas
+              _buildNavItem(navWeddings, () {
+                if (onNavigateToWeddings != null) {
+                  onNavigateToWeddings!();
+                }
+              }),
+              const SizedBox(width: 20),
+              // Términos
+              _buildNavItem(navTerms, () {
+                if (onNavigateToTerms != null) {
+                  onNavigateToTerms!();
                 }
               }),
             ],

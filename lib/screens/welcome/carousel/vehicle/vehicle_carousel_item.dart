@@ -3,9 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../../../../../l10n/app_localizations.dart';
 import 'vehicle_translations.dart';
 
-// Constants
-const _kSpacing = 16.0;
-
 /// Item individual del carrusel de vehículos
 /// Extraído de welcome_screen.dart
 class VehicleCarouselItem extends StatelessWidget {
@@ -82,52 +79,6 @@ class VehicleCarouselItem extends StatelessWidget {
                     },
                   );
                 },
-              ),
-            ),
-          ),
-
-          // Vehicle Info Overlay
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(_kSpacing * 2),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Builder(
-                    builder: (context) {
-                      return Text(
-                        VehicleTranslations.getVehicleName(vehicle['key'] as String, context),
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  Builder(
-                    builder: (context) {
-                      return Text(
-                        VehicleTranslations.getVehicleDescription(
-                          vehicle['descriptionKey'] as String,
-                          context,
-                        ),
-                        style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.9)),
-                      );
-                    },
-                  ),
-                ],
               ),
             ),
           ),

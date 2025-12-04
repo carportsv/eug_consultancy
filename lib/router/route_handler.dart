@@ -4,9 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/auth_gate.dart';
 import '../auth/user_service.dart';
 import '../screens/welcome/welcome/welcome_screen.dart';
-import '../screens/welcome/welcome/company_screen.dart';
-import '../screens/welcome/welcome/destinations_screen.dart';
-import '../screens/welcome/welcome/contacts_screen.dart';
+import '../screens/welcome/welcome/menus/company_screen.dart';
+import '../screens/welcome/welcome/menus/destinations_screen.dart';
+import '../screens/welcome/welcome/menus/contacts_screen.dart';
 
 /// Widget que maneja las rutas basándose en la URL actual
 class RouteHandler extends StatelessWidget {

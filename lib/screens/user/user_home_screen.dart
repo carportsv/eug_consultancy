@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../welcome/welcome/welcome_screen.dart';
-import '../welcome/welcome/request_ride_screen.dart';
+import '../welcome/booking/request_ride_screen.dart';
 
 // Constants
 const _kPrimaryColor = Color(0xFF1D4ED8);

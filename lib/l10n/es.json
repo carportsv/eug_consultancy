@@ -12,7 +12,10 @@
     "service": "Servicios",
     "rates": "Profesionalismo",
     "destination": "Destinos",
-    "contacts": "Contactos"
+    "contacts": "Contactos",
+    "tours": "Tours",
+    "weddings": "Bodas",
+    "terms": "Términos"
   },
   "auth": {
     "register": "Regístrate",
@@ -191,6 +194,7 @@
   },
   "requestRide": {
     "requestNewRide": "Solicitar Nuevo Viaje",
+    "completeDetails": "Complete los detalles para solicitar un nuevo viaje",
     "tripDate": "Fecha del Viaje *",
     "tripTime": "Hora del Viaje *",
     "tripCost": "Costo del Viaje",
@@ -285,7 +289,12 @@
     "expiryDateRequired": "La fecha de expiración es requerida",
     "cvvRequired": "El CVV es requerido",
     "cvvInvalid": "CVV debe tener 3 o 4 dígitos",
-    "expiryFormat": "Formato: MM/YY"
+    "expiryFormat": "Formato: MM/YY",
+    "enterCardDetails": "Ingrese los datos de su tarjeta para completar el pago",
+    "scanWithMobile": "Escanea con tu móvil",
+    "linkOpenedInNewWindow": "El link de pago también se abrió en una nueva ventana",
+    "confirmPayment": "Confirmar Pago",
+    "processPayment": "Procesar Pago"
   },
   "summary": {
     "origin": "Origen",
@@ -315,7 +324,86 @@
     "receiptStatus": "Estado",
     "receiptPaid": "Pagado",
     "receiptScheduledDateTime": "Fecha y Hora Programada",
-    "receiptThankYou": "¡Gracias por su compra!"
+    "receiptThankYou": "¡Gracias por su compra!",
+    "receiptTime": "Hora",
+    "receiptPaymentProcessed": "Su pago ha sido procesado correctamente",
+    "receiptCopiedToClipboard": "Recibo copiado al portapapeles",
+    "receiptHopeToServeYouAgain": "Esperamos servirle nuevamente"
+  },
+  "whatsapp": {
+    "messageWelcome": "Hola, necesito información sobre servicios de taxi",
+    "messageRideHelp": "Hola, necesito ayuda con mi reserva de taxi",
+    "messagePaymentHelp": "Hola, necesito ayuda con mi pago",
+    "messageReceiptHelp": "Hola, tengo una consulta sobre mi recibo",
+    "labelOrigin": "Origen",
+    "labelDestination": "Destino",
+    "labelReceiptNumber": "N° Recibo",
+    "labelDate": "Fecha",
+    "labelAmount": "Monto"
+  },
+  "tours": {
+    "title": "Tours Turísticos",
+    "subtitle": "Descubre la belleza de Sicilia con nuestros tours personalizados",
+    "ourTours": "Nuestros Tours",
+    "ourToursDesc": "Experiencias únicas diseñadas para ti",
+    "cityTitle": "Tour por la Ciudad",
+    "cityDesc": "Explora los lugares más emblemáticos de Sicilia",
+    "historicalTitle": "Tour Histórico",
+    "historicalDesc": "Descubre la rica historia y cultura siciliana",
+    "gastronomicTitle": "Tour Gastronómico",
+    "gastronomicDesc": "Degusta la auténtica cocina siciliana",
+    "coastalTitle": "Tour Costero",
+    "coastalDesc": "Disfruta de las playas más hermosas",
+    "natureTitle": "Tour Natural",
+    "natureDesc": "Explora la naturaleza y paisajes sicilianos",
+    "wineTitle": "Tour de Vinos",
+    "wineDesc": "Visita viñedos y cata vinos locales",
+    "duration": "Duración",
+    "whyChooseUs": "¿Por qué elegirnos?",
+    "feature1Title": "Guías Profesionales",
+    "feature1Desc": "Expertos locales certificados",
+    "feature2Title": "Grupos Pequeños",
+    "feature2Desc": "Experiencia personalizada",
+    "feature3Title": "Mejor Valoración",
+    "feature3Desc": "5 estrellas en reseñas"
+  },
+  "weddings": {
+    "title": "Bodas & Eventos Especiales",
+    "subtitle": "Hacemos de tu día especial una experiencia inolvidable con nuestro servicio premium de transporte",
+    "ourServices": "Nuestros Servicios",
+    "serviceTransportTitle": "Transporte de Novios",
+    "serviceTransportDesc": "Vehículos de lujo para el traslado de los novios",
+    "serviceGuestsTitle": "Traslado de Invitados",
+    "serviceGuestsDesc": "Minibuses y vans para tus invitados",
+    "serviceReceptionTitle": "Servicio de Recepción",
+    "serviceReceptionDesc": "Transporte desde la ceremonia a la recepción",
+    "serviceHotelTitle": "Traslado al Hotel",
+    "serviceHotelDesc": "Servicio nocturno para novios e invitados",
+    "packages": "Paquetes Personalizados",
+    "packagesDesc": "Creamos paquetes a medida según el número de invitados y tus necesidades específicas",
+    "contactUs": "Contáctanos para cotización"
+  },
+  "terms": {
+    "title": "Términos y Condiciones",
+    "lastUpdate": "Última actualización: Diciembre 2024",
+    "section1Title": "Aceptación de los Términos",
+    "section1Content": "Al utilizar nuestros servicios de transporte, usted acepta estar sujeto a estos términos y condiciones. Si no está de acuerdo con alguna parte de estos términos, no debe utilizar nuestros servicios.",
+    "section2Title": "Servicios Ofrecidos",
+    "section2Content": "Ofrecemos servicios de transporte privado, incluyendo traslados al aeropuerto, tours turísticos, servicios para eventos especiales y transporte corporativo. Todos nuestros servicios están sujetos a disponibilidad.",
+    "section3Title": "Reservas y Pagos",
+    "section3Content": "Las reservas pueden realizarse a través de nuestra plataforma web. El pago debe completarse al momento de la reserva mediante los métodos de pago aceptados (tarjeta de crédito, PayPal, Apple Pay, Google Pay). Todas las tarifas incluyen IVA.",
+    "section4Title": "Cancelaciones y Reembolsos",
+    "section4Content": "Las cancelaciones realizadas con más de 24 horas de anticipación tendrán un reembolso completo. Cancelaciones con menos de 24 horas tendrán un cargo del 50%. No se realizarán reembolsos por cancelaciones el mismo día del servicio.",
+    "section5Title": "Responsabilidades del Cliente",
+    "section5Content": "El cliente debe proporcionar información precisa sobre la ubicación de recogida y destino. Debe estar listo en el punto de recogida a la hora acordada. El cliente es responsable de sus pertenencias personales durante el viaje.",
+    "section6Title": "Limitación de Responsabilidad",
+    "section6Content": "Nuestra responsabilidad se limita al servicio de transporte contratado. No somos responsables por retrasos causados por tráfico, condiciones climáticas adversas o circunstancias fuera de nuestro control.",
+    "section7Title": "Protección de Datos",
+    "section7Content": "Tratamos sus datos personales de acuerdo con el RGPD y nuestra Política de Privacidad. Sus datos solo se utilizan para proporcionar y mejorar nuestros servicios.",
+    "section8Title": "Modificaciones",
+    "section8Content": "Nos reservamos el derecho de modificar estos términos en cualquier momento. Las modificaciones entrarán en vigor inmediatamente después de su publicación en nuestra plataforma.",
+    "questions": "¿Preguntas sobre nuestros términos?",
+    "contactUs": "Contáctanos y estaremos encantados de ayudarte"
   }
 }
 

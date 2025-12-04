@@ -68,6 +68,9 @@ class AppLocalizations {
   String get navRates => translate('nav.rates');
   String get navDestination => translate('nav.destination');
   String get navContacts => translate('nav.contacts');
+  String get navTours => translate('nav.tours');
+  String get navWeddings => translate('nav.weddings');
+  String get navTerms => translate('nav.terms');
   String get originLabel => translate('form.origin');
   String get destinationLabel => translate('form.destination');
   String get pickupDate => translate('form.pickupDate');
@@ -240,6 +243,7 @@ class AppLocalizations {
       translate('requestRide.invalidFormatWithExample');
   String get requestRideSignOut => translate('requestRide.signOut');
   String get requestRideUnknownError => translate('requestRide.unknownError');
+  String get requestRideCompleteDetails => translate('requestRide.completeDetails');
 
   // Common
   String get commonGettingLocation => translate('common.gettingLocation');
@@ -261,6 +265,7 @@ class AppLocalizations {
   String get commonThisFieldIsRequired => translate('common.thisFieldIsRequired');
   String get commonEnterValidEmail => translate('common.enterValidEmail');
   String get commonVerifiedDrivers => translate('common.verifiedDrivers');
+  String get commonAllRightsReserved => translate('common.allRightsReserved');
   List<String> get commonWeekDays => List<String>.from(translate('common.weekDays') as List);
   List<String> get commonMonths => List<String>.from(translate('common.months') as List);
 
@@ -306,6 +311,11 @@ class AppLocalizations {
   String get paymentCvvRequired => translate('payment.cvvRequired');
   String get paymentCvvInvalid => translate('payment.cvvInvalid');
   String get paymentExpiryFormat => translate('payment.expiryFormat');
+  String get paymentEnterCardDetails => translate('payment.enterCardDetails');
+  String get paymentScanWithMobile => translate('payment.scanWithMobile');
+  String get paymentLinkOpenedInNewWindow => translate('payment.linkOpenedInNewWindow');
+  String get paymentConfirmPayment => translate('payment.confirmPayment');
+  String get paymentProcessPayment => translate('payment.processPayment');
 
   // Summary
   String get summaryOrigin => translate('summary.origin');
@@ -336,6 +346,85 @@ class AppLocalizations {
   String get receiptPaid => translate('receipt.receiptPaid');
   String get receiptScheduledDateTime => translate('receipt.receiptScheduledDateTime');
   String get receiptThankYou => translate('receipt.receiptThankYou');
+  String get receiptTime => translate('receipt.receiptTime');
+  String get receiptPaymentProcessed => translate('receipt.receiptPaymentProcessed');
+  String get receiptCopiedToClipboard => translate('receipt.receiptCopiedToClipboard');
+  String get receiptHopeToServeYouAgain => translate('receipt.receiptHopeToServeYouAgain');
+
+  // WhatsApp messages
+  String get whatsappMessageWelcome => translate('whatsapp.messageWelcome');
+  String get whatsappMessageRideHelp => translate('whatsapp.messageRideHelp');
+  String get whatsappMessagePaymentHelp => translate('whatsapp.messagePaymentHelp');
+  String get whatsappMessageReceiptHelp => translate('whatsapp.messageReceiptHelp');
+  String get whatsappLabelOrigin => translate('whatsapp.labelOrigin');
+  String get whatsappLabelDestination => translate('whatsapp.labelDestination');
+  String get whatsappLabelReceiptNumber => translate('whatsapp.labelReceiptNumber');
+  String get whatsappLabelDate => translate('whatsapp.labelDate');
+  String get whatsappLabelAmount => translate('whatsapp.labelAmount');
+
+  // Tours
+  String get toursTitle => translate('tours.title');
+  String get toursSubtitle => translate('tours.subtitle');
+  String get toursOurTours => translate('tours.ourTours');
+  String get toursOurToursDesc => translate('tours.ourToursDesc');
+  String get toursCityTitle => translate('tours.cityTitle');
+  String get toursCityDesc => translate('tours.cityDesc');
+  String get toursHistoricalTitle => translate('tours.historicalTitle');
+  String get toursHistoricalDesc => translate('tours.historicalDesc');
+  String get toursGastronomicTitle => translate('tours.gastronomicTitle');
+  String get toursGastronomicDesc => translate('tours.gastronomicDesc');
+  String get toursCoastalTitle => translate('tours.coastalTitle');
+  String get toursCoastalDesc => translate('tours.coastalDesc');
+  String get toursNatureTitle => translate('tours.natureTitle');
+  String get toursNatureDesc => translate('tours.natureDesc');
+  String get toursWineTitle => translate('tours.wineTitle');
+  String get toursWineDesc => translate('tours.wineDesc');
+  String get toursDuration => translate('tours.duration');
+  String get toursWhyChooseUs => translate('tours.whyChooseUs');
+  String get toursFeature1Title => translate('tours.feature1Title');
+  String get toursFeature1Desc => translate('tours.feature1Desc');
+  String get toursFeature2Title => translate('tours.feature2Title');
+  String get toursFeature2Desc => translate('tours.feature2Desc');
+  String get toursFeature3Title => translate('tours.feature3Title');
+  String get toursFeature3Desc => translate('tours.feature3Desc');
+
+  // Weddings
+  String get weddingsTitle => translate('weddings.title');
+  String get weddingsSubtitle => translate('weddings.subtitle');
+  String get weddingsOurServices => translate('weddings.ourServices');
+  String get weddingsServiceTransportTitle => translate('weddings.serviceTransportTitle');
+  String get weddingsServiceTransportDesc => translate('weddings.serviceTransportDesc');
+  String get weddingsServiceGuestsTitle => translate('weddings.serviceGuestsTitle');
+  String get weddingsServiceGuestsDesc => translate('weddings.serviceGuestsDesc');
+  String get weddingsServiceReceptionTitle => translate('weddings.serviceReceptionTitle');
+  String get weddingsServiceReceptionDesc => translate('weddings.serviceReceptionDesc');
+  String get weddingsServiceHotelTitle => translate('weddings.serviceHotelTitle');
+  String get weddingsServiceHotelDesc => translate('weddings.serviceHotelDesc');
+  String get weddingsPackages => translate('weddings.packages');
+  String get weddingsPackagesDesc => translate('weddings.packagesDesc');
+  String get weddingsContactUs => translate('weddings.contactUs');
+
+  // Terms
+  String get termsTitle => translate('terms.title');
+  String get termsLastUpdate => translate('terms.lastUpdate');
+  String get termsSection1Title => translate('terms.section1Title');
+  String get termsSection1Content => translate('terms.section1Content');
+  String get termsSection2Title => translate('terms.section2Title');
+  String get termsSection2Content => translate('terms.section2Content');
+  String get termsSection3Title => translate('terms.section3Title');
+  String get termsSection3Content => translate('terms.section3Content');
+  String get termsSection4Title => translate('terms.section4Title');
+  String get termsSection4Content => translate('terms.section4Content');
+  String get termsSection5Title => translate('terms.section5Title');
+  String get termsSection5Content => translate('terms.section5Content');
+  String get termsSection6Title => translate('terms.section6Title');
+  String get termsSection6Content => translate('terms.section6Content');
+  String get termsSection7Title => translate('terms.section7Title');
+  String get termsSection7Content => translate('terms.section7Content');
+  String get termsSection8Title => translate('terms.section8Title');
+  String get termsSection8Content => translate('terms.section8Content');
+  String get termsQuestions => translate('terms.questions');
+  String get termsContactUs => translate('terms.contactUs');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

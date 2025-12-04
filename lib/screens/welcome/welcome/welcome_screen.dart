@@ -8,9 +8,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../auth/login_screen.dart';
-import '../../../widgets/app_logo_header.dart';
+import '../../../shared/widgets/app_logo_header.dart';
 import '../../../l10n/app_localizations.dart';
-import 'request_ride_screen.dart';
+import '../booking/request_ride_screen.dart';
 import '../navbar/welcome_navbar.dart';
 import '../form/welcome_form_section.dart';
 import '../form/address_autocomplete_service.dart';
@@ -18,12 +18,16 @@ import '../form/ride_calculation_service.dart';
 import '../carousel/vehicle/vehicle_carousel.dart';
 import '../carousel/vehicle/vehicle_data.dart';
 import '../carousel/background/background_carousel.dart';
-import 'widgets/welcome_footer.dart';
-import 'company_screen.dart';
-import 'destinations_screen.dart';
-import 'contacts_screen.dart';
-import 'servicios_screen.dart';
-import 'acerca_de_screen.dart';
+import '../../../shared/widgets/welcome_footer.dart';
+import 'menus/company_screen.dart';
+import 'menus/destinations_screen.dart';
+import 'menus/contacts_screen.dart';
+import 'menus/servicios_screen.dart';
+import 'menus/acerca_de_screen.dart';
+import 'menus/tours_screen.dart';
+import 'menus/weddings_screen.dart';
+import 'menus/terms_screen.dart';
+import '../../../shared/widgets/whatsapp_floating_button.dart';
 
 // Constants
 const _kPrimaryColor = Color(0xFF1D4ED8);
@@ -566,6 +570,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         onNavigateToAbout: _navigateToAbout,
         onNavigateToDestination: _navigateToDestination,
         onNavigateToContacts: _navigateToContacts,
+        onNavigateToTours: _navigateToTours,
+        onNavigateToWeddings: _navigateToWeddings,
+        onNavigateToTerms: _navigateToTerms,
       ),
       body: Stack(
         children: [
@@ -617,6 +624,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           ),
           AppLogoHeader(onTap: _navigateToWelcomePath),
         ],
+      ),
+      floatingActionButton: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          return WhatsAppFloatingButton(
+            prefilledMessage:
+                l10n?.whatsappMessageWelcome ??
+                'Hola, necesito información sobre servicios de taxi',
+          );
+        },
       ),
     );
   }
@@ -759,6 +776,45 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     }
   }
 
+  void _navigateToTours() {
+    if (!mounted) return;
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const ToursScreen()));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[WelcomeScreen] ❌ Error navegando a ToursScreen: $e');
+      }
+    }
+  }
+
+  void _navigateToWeddings() {
+    if (!mounted) return;
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const WeddingsScreen()));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[WelcomeScreen] ❌ Error navegando a WeddingsScreen: $e');
+      }
+    }
+  }
+
+  void _navigateToTerms() {
+    if (!mounted) return;
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const TermsScreen()));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[WelcomeScreen] ❌ Error navegando a TermsScreen: $e');
+      }
+    }
+  }
+
   /// Navega a servicios
   void _navigateToServices() {
     if (kDebugMode) {
@@ -879,13 +935,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   flex: 1,
                   child: Container(
                     padding: EdgeInsets.only(
-                      top: _kSpacing * 4,
+                      top: _kSpacing * 10,
                       bottom: _kSpacing * 2,
                       left: _kSpacing * 2,
                       right: _kSpacing * 2,
                     ),
                     child: Center(
-                      child: SizedBox(height: 425, child: VehicleCarousel(vehicles: _vehicles)),
+                    child: SizedBox(height: 425, child: VehicleCarousel(vehicles: _vehicles)),
                     ),
                   ),
                 ),
@@ -1394,16 +1450,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             builder: (context) {
               final l10n = AppLocalizations.of(context);
               return Center(
-                child: Text(
+            child: Text(
                   l10n?.featuresSubtitle ?? 'Descubre por qué somos tu mejor opción para viajar',
-                  style: GoogleFonts.exo(
-                    fontSize: isTablet ? 13 : 12,
-                    color: Colors.black87,
-                    height: 1.5,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+              style: GoogleFonts.exo(
+                fontSize: isTablet ? 13 : 12,
+                color: Colors.black87,
+                height: 1.5,
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+            ),
               );
             },
           ),
@@ -1419,9 +1475,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     return Builder(
       builder: (context) {
         final l10n = AppLocalizations.of(context);
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
             Expanded(
               child: _buildFeatureCard(
                 1,
@@ -1430,7 +1486,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 isTablet,
               ),
             ),
-            SizedBox(width: _kSpacing * 3),
+        SizedBox(width: _kSpacing * 3),
             Expanded(
               child: _buildFeatureCard(
                 2,
@@ -1439,7 +1495,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 isTablet,
               ),
             ),
-            SizedBox(width: _kSpacing * 3),
+        SizedBox(width: _kSpacing * 3),
             Expanded(
               child: _buildFeatureCard(
                 3,
@@ -1448,7 +1504,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 isTablet,
               ),
             ),
-          ],
+      ],
         );
       },
     );
@@ -1461,29 +1517,29 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     return Builder(
       builder: (context) {
         final l10n = AppLocalizations.of(context);
-        return Column(
-          children: [
+    return Column(
+      children: [
             _buildFeatureCard(
               1,
               l10n?.featuresFeature1Title ?? 'Viaje',
               l10n?.featuresFeature1Description ?? _getFeature1Text(),
               isTablet,
             ),
-            SizedBox(height: _kSpacing * 2.5),
+        SizedBox(height: _kSpacing * 2.5),
             _buildFeatureCard(
               2,
               l10n?.featuresFeature2Title ?? 'Experiencia',
               l10n?.featuresFeature2Description ?? _getFeature2Text(),
               isTablet,
             ),
-            SizedBox(height: _kSpacing * 2.5),
+        SizedBox(height: _kSpacing * 2.5),
             _buildFeatureCard(
               3,
               l10n?.featuresFeature3Title ?? 'Relax',
               l10n?.featuresFeature3Description ?? _getFeature3Text(),
               isTablet,
             ),
-          ],
+      ],
         );
       },
     );
@@ -1959,11 +2015,11 @@ class _CustomTimePickerDialogState extends State<_CustomTimePickerDialog> {
                   final l10n = AppLocalizations.of(context);
                   return Text(
                     l10n != null ? l10n.timePickerEditLabel(label) : 'Editar $label',
-                    style: GoogleFonts.exo(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: _kTextColor,
-                    ),
+                style: GoogleFonts.exo(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: _kTextColor,
+                ),
                   );
                 },
               ),
@@ -2029,7 +2085,7 @@ class _CustomTimePickerDialogState extends State<_CustomTimePickerDialog> {
                           final l10n = AppLocalizations.of(context);
                           return Text(
                             l10n?.accept ?? 'Aceptar',
-                            style: GoogleFonts.exo(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.exo(fontSize: 16, fontWeight: FontWeight.bold),
                           );
                         },
                       ),
@@ -2095,10 +2151,10 @@ class _CustomTimePickerDialogState extends State<_CustomTimePickerDialog> {
                   builder: (context) {
                     final l10n = AppLocalizations.of(context);
                     return _buildNumberPicker(
-                      value: _selectedHour,
-                      min: 1,
-                      max: 12,
-                      onChanged: _updateHour,
+                  value: _selectedHour,
+                  min: 1,
+                  max: 12,
+                  onChanged: _updateHour,
                       label: l10n?.timePickerHour ?? 'Hora',
                     );
                   },
@@ -2121,11 +2177,11 @@ class _CustomTimePickerDialogState extends State<_CustomTimePickerDialog> {
                   builder: (context) {
                     final l10n = AppLocalizations.of(context);
                     return _buildNumberPicker(
-                      value: _selectedMinute,
-                      min: 0,
-                      max: 59,
-                      step: 1,
-                      onChanged: _updateMinute,
+                  value: _selectedMinute,
+                  min: 0,
+                  max: 59,
+                  step: 1,
+                  onChanged: _updateMinute,
                       label: l10n?.timePickerMinute ?? 'Minuto',
                     );
                   },
