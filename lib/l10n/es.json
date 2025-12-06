@@ -182,10 +182,14 @@
   "contacts": {
     "title": "¿Tienes alguna pregunta?",
     "subtitle": "Estamos aquí para ayudarte",
+    "intro": "Estamos aquí para ayudarte. Contáctanos a través de cualquiera de nuestros canales y te responderemos lo antes posible.",
     "phone": "Teléfono",
     "email": "Email",
+    "emailDesc": "Escríbenos a nuestro correo electrónico",
     "website": "Sitio Web",
-    "location": "Ubicación"
+    "websiteDesc": "Visita nuestro sitio web oficial",
+    "location": "Ubicación",
+    "locationDesc": "Estamos ubicados en Sicilia, Italia"
   },
   "footer": {
     "description1": "Tu solución definitiva para traslados confiables, elegantes y personalizados.",
@@ -344,6 +348,7 @@
   "tours": {
     "title": "Tours Turísticos",
     "subtitle": "Descubre la belleza de Sicilia con nuestros tours personalizados",
+    "intro": "Descubre la belleza de Sicilia con nuestros tours personalizados. Experiencias únicas diseñadas para ti, con guías profesionales y vehículos de lujo.",
     "ourTours": "Nuestros Tours",
     "ourToursDesc": "Experiencias únicas diseñadas para ti",
     "cityTitle": "Tour por la Ciudad",
@@ -370,6 +375,7 @@
   "weddings": {
     "title": "Bodas & Eventos Especiales",
     "subtitle": "Hacemos de tu día especial una experiencia inolvidable con nuestro servicio premium de transporte",
+    "intro": "Hacemos de tu día especial una experiencia inolvidable con nuestro servicio premium de transporte. Vehículos de lujo, conductores profesionales y atención personalizada para tu boda o evento especial.",
     "ourServices": "Nuestros Servicios",
     "serviceTransportTitle": "Transporte de Novios",
     "serviceTransportDesc": "Vehículos de lujo para el traslado de los novios",

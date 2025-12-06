@@ -139,13 +139,16 @@ class SupabaseService {
         // Usuario existe, actualizar
         if (kDebugMode) {
           print('✅ Usuario existe en Supabase, actualizando...');
+          print('🔍 Rol actual del usuario: ${existingUserResponse['role']}');
         }
 
+        // IMPORTANTE: No actualizar el rol, solo los demás campos
+        // El rol debe preservarse del usuario existente
         // Si se encontró por email, actualizar también el firebase_uid
         await supabaseClient.from('users').update(userData).eq('id', existingUserResponse['id']);
 
         if (kDebugMode) {
-          print('✅ Usuario actualizado en Supabase');
+          print('✅ Usuario actualizado en Supabase (rol preservado: ${existingUserResponse['role']})');
         }
         return true;
       } else {
@@ -239,17 +242,63 @@ class SupabaseService {
         print('[SupabaseService] Querying role for firebase_uid: $firebaseUid');
       }
 
-      final response = await supabaseClient
+      // Intentar primero por firebase_uid
+      if (kDebugMode) {
+        print('[SupabaseService] 🔍 Buscando usuario por firebase_uid: $firebaseUid');
+      }
+      var response = await supabaseClient
           .from('users')
-          .select('role')
+          .select('role, email, firebase_uid, id')
           .eq('firebase_uid', firebaseUid)
           .maybeSingle()
           .timeout(const Duration(seconds: 5));
+
+      if (kDebugMode) {
+        if (response != null) {
+          print('[SupabaseService] ✅ Usuario encontrado por firebase_uid');
+        } else {
+          print('[SupabaseService] ⚠️ Usuario NO encontrado por firebase_uid');
+        }
+      }
+
+      // Si no se encuentra por firebase_uid, intentar por email del usuario actual de Firebase
+      if (response == null) {
+        final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+        if (firebaseUser != null && firebaseUser.email != null && firebaseUser.email!.isNotEmpty) {
+          if (kDebugMode) {
+            print('[SupabaseService] 🔍 Usuario no encontrado por firebase_uid, buscando por email: ${firebaseUser.email}');
+          }
+          response = await supabaseClient
+              .from('users')
+              .select('role, email, firebase_uid, id')
+              .eq('email', firebaseUser.email!)
+              .maybeSingle()
+              .timeout(const Duration(seconds: 5));
+          
+          if (kDebugMode) {
+            if (response != null) {
+              print('[SupabaseService] ✅ Usuario encontrado por email');
+              // Si se encontró por email pero el firebase_uid no coincide, actualizarlo
+              if (response['firebase_uid'] != firebaseUid) {
+                print('[SupabaseService] ⚠️ firebase_uid no coincide, actualizando...');
+                await supabaseClient
+                    .from('users')
+                    .update({'firebase_uid': firebaseUid})
+                    .eq('id', response['id']);
+                print('[SupabaseService] ✅ firebase_uid actualizado');
+              }
+            } else {
+              print('[SupabaseService] ⚠️ Usuario NO encontrado por email tampoco');
+            }
+          }
+        }
+      }
 
       if (response != null) {
         final role = response['role'] as String? ?? 'user';
         if (kDebugMode) {
           print('[SupabaseService] ✅ Role found: $role');
+          print('[SupabaseService] 🔍 User data: email=${response['email']}, firebase_uid=${response['firebase_uid']}');
         }
         return role;
       } else {

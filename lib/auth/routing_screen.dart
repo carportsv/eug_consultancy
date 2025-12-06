@@ -53,8 +53,11 @@ class _RoutingScreenState extends State<RoutingScreen> {
     // Esto es especialmente importante en web donde puede ser la primera vez
     try {
       debugPrint('[RoutingScreen] Sincronizando usuario con Supabase primero...');
-      await _userService.syncUserWithSupabase();
-      debugPrint('[RoutingScreen] Sincronización completada');
+      debugPrint('[RoutingScreen] UID del usuario: ${user.uid}, Email: ${user.email}');
+      final syncResult = await _userService.syncUserWithSupabase();
+      debugPrint('[RoutingScreen] Sincronización completada: $syncResult');
+      // Esperar un poco para asegurar que la sincronización se complete en la BD
+      await Future.delayed(const Duration(milliseconds: 500));
     } catch (e) {
       debugPrint('[RoutingScreen] Error en sincronización: $e. Continuando...');
     }
@@ -83,6 +86,20 @@ class _RoutingScreenState extends State<RoutingScreen> {
 
         roleObtained = true;
         debugPrint('[RoutingScreen] ✅ User role obtenido en intento $attempt: $role');
+        debugPrint('[RoutingScreen] 🔍 Verificando rol obtenido: $role para UID: ${user.uid}');
+
+        // Si el rol es 'user' pero esperábamos 'admin', intentar una vez más después de un delay
+        if (role == 'user' && attempt < maxAttempts) {
+          debugPrint('[RoutingScreen] ⚠️ Rol es "user", esperando un poco más y reintentando...');
+          await Future.delayed(const Duration(milliseconds: 1000));
+          final retryRole = await _userService
+              .getUserRole(user.uid)
+              .timeout(const Duration(seconds: 5), onTimeout: () => 'user');
+          if (retryRole != 'user') {
+            debugPrint('[RoutingScreen] ✅ Rol corregido después de retry: $retryRole');
+            role = retryRole;
+          }
+        }
       } catch (e) {
         debugPrint('[RoutingScreen] ❌ Error en intento $attempt/$maxAttempts: $e');
         if (attempt < maxAttempts) {

@@ -13,6 +13,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../auth/login_screen.dart';
 import '../../../auth/supabase_service.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../widgets/safe_circle_avatar.dart';
 import '../form/address_autocomplete_service.dart';
 import '../form/ride_calculation_service.dart';
 import '../welcome/welcome_screen.dart';
@@ -790,15 +791,12 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // Foto de perfil o icono
-                        CircleAvatar(
+                        SafeCircleAvatar(
+                          imageUrl: _currentUser!.photoURL,
                           radius: 18,
                           backgroundColor: Colors.grey.shade200,
-                          backgroundImage: _currentUser!.photoURL != null
-                              ? NetworkImage(_currentUser!.photoURL!)
-                              : null,
-                          child: _currentUser!.photoURL == null
-                              ? Icon(Icons.person, color: _kTextColor, size: 20)
-                              : null,
+                          iconColor: _kTextColor,
+                          icon: Icons.person,
                         ),
                         const SizedBox(width: 8),
                         // Nombre del usuario
@@ -824,15 +822,12 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          CircleAvatar(
+                          SafeCircleAvatar(
+                            imageUrl: _currentUser!.photoURL,
                             radius: 24,
                             backgroundColor: _kPrimaryColor.withValues(alpha: 0.1),
-                            backgroundImage: _currentUser!.photoURL != null
-                                ? NetworkImage(_currentUser!.photoURL!)
-                                : null,
-                            child: _currentUser!.photoURL == null
-                                ? Icon(Icons.person, color: _kPrimaryColor, size: 24)
-                                : null,
+                            iconColor: _kPrimaryColor,
+                            icon: Icons.person,
                           ),
                           const SizedBox(width: 12),
                           Expanded(

@@ -216,10 +216,14 @@ class AppLocalizations {
   // Contacts
   String get contactsTitle => translate('contacts.title');
   String get contactsSubtitle => translate('contacts.subtitle');
+  String get contactsIntro => translate('contacts.intro');
   String get contactsPhone => translate('contacts.phone');
   String get contactsEmail => translate('contacts.email');
+  String get contactsEmailDesc => translate('contacts.emailDesc');
   String get contactsWebsite => translate('contacts.website');
+  String get contactsWebsiteDesc => translate('contacts.websiteDesc');
   String get contactsLocation => translate('contacts.location');
+  String get contactsLocationDesc => translate('contacts.locationDesc');
 
   // Footer
   String get footerDescription1 => translate('footer.description1');
@@ -365,6 +369,7 @@ class AppLocalizations {
   // Tours
   String get toursTitle => translate('tours.title');
   String get toursSubtitle => translate('tours.subtitle');
+  String get toursIntro => translate('tours.intro');
   String get toursOurTours => translate('tours.ourTours');
   String get toursOurToursDesc => translate('tours.ourToursDesc');
   String get toursCityTitle => translate('tours.cityTitle');
@@ -391,6 +396,7 @@ class AppLocalizations {
   // Weddings
   String get weddingsTitle => translate('weddings.title');
   String get weddingsSubtitle => translate('weddings.subtitle');
+  String get weddingsIntro => translate('weddings.intro');
   String get weddingsOurServices => translate('weddings.ourServices');
   String get weddingsServiceTransportTitle => translate('weddings.serviceTransportTitle');
   String get weddingsServiceTransportDesc => translate('weddings.serviceTransportDesc');
@@ -408,7 +414,7 @@ class AppLocalizations {
   String get termsTitle => translate('terms.title');
   String get termsLastUpdate => translate('terms.lastUpdate');
   String get termsIntro => translate('terms.intro');
-  
+
   // Sección 1: PREMESAS
   String get termsSection1Title => translate('terms.section1Title');
   String get termsSection1_1 => translate('terms.section1_1');
@@ -416,7 +422,7 @@ class AppLocalizations {
   String get termsSection1_3 => translate('terms.section1_3');
   String get termsSection1_3a => translate('terms.section1_3a');
   String get termsSection1_3b => translate('terms.section1_3b');
-  
+
   // Sección 2: RESERVAS
   String get termsSection2Title => translate('terms.section2Title');
   String get termsSection2_1 => translate('terms.section2_1');
@@ -429,21 +435,21 @@ class AppLocalizations {
   String get termsSection2_4 => translate('terms.section2_4');
   String get termsSection2_5 => translate('terms.section2_5');
   String get termsSection2_6 => translate('terms.section2_6');
-  
+
   // Sección 3: RECESO Y PENALIDADES
   String get termsSection3Title => translate('terms.section3Title');
   String get termsSection3_1 => translate('terms.section3_1');
-  
+
   // Sección 4: LEY APLICABLE
   String get termsSection4Title => translate('terms.section4Title');
   String get termsSection4_1 => translate('terms.section4_1');
-  
+
   // Sección 5: EQUIPAJE
   String get termsSection5Title => translate('terms.section5Title');
   String get termsSection5_1 => translate('terms.section5_1');
   String get termsSection5_1b => translate('terms.section5_1b');
   String get termsSection5_2 => translate('terms.section5_2');
-  
+
   // Sección 6: RETRASOS
   String get termsSection6Title => translate('terms.section6Title');
   String get termsSection6_1 => translate('terms.section6_1');
@@ -451,7 +457,7 @@ class AppLocalizations {
   String get termsSection6_2b => translate('terms.section6_2b');
   String get termsSection6_3 => translate('terms.section6_3');
   String get termsSection6_3b => translate('terms.section6_3b');
-  
+
   // Sección 7: MODALIDADES DEL TRANSPORTE
   String get termsSection7Title => translate('terms.section7Title');
   String get termsSection7_1 => translate('terms.section7_1');
@@ -459,7 +465,7 @@ class AppLocalizations {
   String get termsSection7_3 => translate('terms.section7_3');
   String get termsSection7_4 => translate('terms.section7_4');
   String get termsSection7_5 => translate('terms.section7_5');
-  
+
   // Sección 8: CANCELACIONES
   String get termsSection8Title => translate('terms.section8Title');
   String get termsSection8_1 => translate('terms.section8_1');
@@ -467,17 +473,17 @@ class AppLocalizations {
   String get termsSection8_1c => translate('terms.section8_1c');
   String get termsSection8_2 => translate('terms.section8_2');
   String get termsSection8_3 => translate('terms.section8_3');
-  
+
   // Sección 9: IDIOMA
   String get termsSection9Title => translate('terms.section9Title');
   String get termsSection9_1 => translate('terms.section9_1');
-  
+
   // Sección 10: PRIVACIDAD
   String get termsSection10Title => translate('terms.section10Title');
   String get termsSection10_1 => translate('terms.section10_1');
   String get termsSection10_2 => translate('terms.section10_2');
   String get termsSection10_3 => translate('terms.section10_3');
-  
+
   // Aprobación específica de cláusulas
   String get termsSpecificApprovalTitle => translate('terms.specificApprovalTitle');
   String get termsSpecificApproval => translate('terms.specificApproval');
@@ -489,7 +495,7 @@ class AppLocalizations {
   String get termsClause6 => translate('terms.clause6');
   String get termsClause7 => translate('terms.clause7');
   String get termsContactEmail => translate('terms.contactEmail');
-  
+
   String get termsQuestions => translate('terms.questions');
   String get termsContactUs => translate('terms.contactUs');
 

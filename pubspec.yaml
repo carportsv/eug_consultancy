@@ -77,17 +77,17 @@ flutter:
     - assets/images/cars/van.jpg
     - assets/images/cars/luxury.jpg
     - assets/images/cars/flote.png
-    - assets/images/background/bg_1.jpg
-    - assets/images/background/bg_2.jpg
-    - assets/images/background/bg_3.jpg
-    - assets/images/background/bg_4.jpg
-    - assets/images/background/bg_5.jpg
-    - assets/images/background/bg_6.jpg
-    - assets/images/background/bg_7.jpg
+    - assets/images/cars/flote_2.png
+    - assets/images/background/bg_1.png
+    - assets/images/background/bg_2.jpeg
+    - assets/images/background/bg_3.png
+    - assets/images/background/bg_4.png
+    - assets/images/background/bg_5.png
     - assets/images/empresa/city.jpg
     - assets/images/empresa/oficina.png
     - assets/images/empresa/pared.png
     - assets/images/empresa/driver.png
+    - assets/images/empresa/prof_1.png
     - assets/images/destinos/destination_1.jpg
     - assets/images/destinos/destination_2.jpg
     - assets/images/destinos/destination_3.jpg

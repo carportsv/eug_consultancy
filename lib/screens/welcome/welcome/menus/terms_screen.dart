@@ -11,7 +11,7 @@ import '../../../../auth/login_screen.dart';
 import '../welcome_screen.dart';
 import 'company_screen.dart';
 import 'servicios_screen.dart';
-import 'acerca_de_screen.dart';
+import 'profesionalidad.dart';
 import 'destinations_screen.dart';
 import 'contacts_screen.dart';
 import 'tours_screen.dart';

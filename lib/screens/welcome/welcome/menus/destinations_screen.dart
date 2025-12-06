@@ -10,7 +10,7 @@ import '../welcome_screen.dart';
 import 'company_screen.dart';
 import 'contacts_screen.dart';
 import 'servicios_screen.dart';
-import 'acerca_de_screen.dart';
+import 'profesionalidad.dart';
 import 'tours_screen.dart';
 import 'weddings_screen.dart';
 import 'terms_screen.dart';
@@ -391,94 +391,117 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
     _navigateToWelcomePath();
   }
 
+  Widget _buildIntroSection(bool isTablet) {
+    return Builder(
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return Center(
+          child: Container(
+            constraints: BoxConstraints(maxWidth: isTablet ? 1500 : double.infinity),
+            child: Text(
+              l10n?.destinationsSubtitle ??
+                  'Reserva ahora tu taxi y viaja cómodamente a los principales destinos de Italia',
+              style: GoogleFonts.exo(
+                fontSize: isTablet ? 18 : 16,
+                color: const Color(0xFF1A202C),
+                height: 1.5,
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth > 900;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      appBar: WelcomeNavbar(
-        currentUser: _currentUser,
-        onNavigateToLogin: _navigateToLogin,
-        onNavigateToProfile: _navigateToProfile,
-        onHandleLogout: _handleLogout,
-        onNavigateToWelcomePath: _navigateToWelcomePath,
-        onNavigateToCompany: _navigateToCompany,
-        onNavigateToServices: _navigateToServices,
-        onNavigateToAbout: _navigateToAbout,
-        onNavigateToDestination: null, // Ya estamos en esta pantalla
-        onNavigateToContacts: _navigateToContacts,
-        onNavigateToTours: _navigateToTours,
-        onNavigateToWeddings: _navigateToWeddings,
-        onNavigateToTerms: _navigateToTerms,
+      extendBodyBehindAppBar: false,
+      backgroundColor: Colors.white,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF1C1C1C).withValues(alpha: 0.95),
+                const Color(0xFF000000).withValues(alpha: 0.95),
+              ],
+            ),
+          ),
+          child: WelcomeNavbar(
+            currentUser: _currentUser,
+            onNavigateToLogin: _navigateToLogin,
+            onNavigateToProfile: _navigateToProfile,
+            onHandleLogout: _handleLogout,
+            onNavigateToWelcomePath: _navigateToWelcomePath,
+            onNavigateToCompany: _navigateToCompany,
+            onNavigateToServices: _navigateToServices,
+            onNavigateToAbout: _navigateToAbout,
+            onNavigateToDestination: null, // Ya estamos en esta pantalla
+            onNavigateToContacts: _navigateToContacts,
+            onNavigateToTours: _navigateToTours,
+            onNavigateToWeddings: _navigateToWeddings,
+            onNavigateToTerms: _navigateToTerms,
+          ),
+        ),
       ),
       body: Stack(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              // Gradiente profesional elegante
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF1E3A8A), // Azul oscuro profesional
-                  const Color(0xFF3B82F6), // Azul medio
-                  const Color(0xFF1D4ED8), // Azul primario de la app
-                  const Color(0xFF0F172A), // Azul muy oscuro
-                ],
-                stops: const [0.0, 0.3, 0.7, 1.0],
-              ),
-            ),
-            child: SafeArea(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    isTablet ? 48.0 : 24.0,
-                    isTablet ? 24.0 : 16.0,
-                    isTablet ? 48.0 : 24.0,
-                    8.0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 60), // Espacio para el navbar
-                      const SizedBox(height: _kSpacing * 1),
-                      Builder(
-                        builder: (context) {
-                          final l10n = AppLocalizations.of(context);
-                          return Text(
-                            l10n?.destinationsSubtitle ??
-                                'Reserva ahora tu taxi y viaja cómodamente',
-                            style: GoogleFonts.exo(
-                              fontSize: isTablet ? 18 : 16,
-                              color: Colors.white.withValues(alpha: 0.9),
-                              height: 1.6,
-                            ),
-                          );
-                        },
+          Column(
+            children: [
+              // Contenido principal
+              Expanded(
+                child: Stack(
+                  children: [
+                    // Fondo blanco
+                    Container(color: Colors.white),
+                    SafeArea(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            isTablet ? 48.0 : 24.0,
+                            isTablet ? 24.0 : 16.0,
+                            isTablet ? 48.0 : 24.0,
+                            8.0,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: _kSpacing), // Espacio para el navbar
+                              // Sección intro
+                              _buildIntroSection(isTablet),
+                              SizedBox(height: _kSpacing * (isTablet ? 2 : 1.5)),
+                              // Grid de destinos
+                              _buildDestinationsGrid(isTablet),
+                              const SizedBox(height: _kSpacing * 2),
+                              // Footer
+                              WelcomeFooter(
+                                onNavigateToWelcome: _navigateToWelcomePath,
+                                onNavigateToDestination: _navigateToDestination,
+                                onNavigateToCompany: _navigateToCompany,
+                                onNavigateToContacts: _navigateToContacts,
+                                onNavigateToServices: _navigateToServices,
+                                onNavigateToAbout: _navigateToAbout,
+                                onNavigateToTerms: _navigateToTerms,
+                                onNavigateToPrivacy: _navigateToPrivacy,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: _kSpacing * 1.5),
-                      // Grid de destinos
-                      _buildDestinationsGrid(isTablet),
-                      const SizedBox(height: _kSpacing * 3),
-                      // Footer
-                      WelcomeFooter(
-                        onNavigateToWelcome: _navigateToWelcomePath,
-                        onNavigateToDestination: _navigateToDestination,
-                        onNavigateToCompany: _navigateToCompany,
-                        onNavigateToContacts: _navigateToContacts,
-                        onNavigateToServices: _navigateToServices,
-                        onNavigateToAbout: _navigateToAbout,
-                        onNavigateToTerms: _navigateToTerms,
-                        onNavigateToPrivacy: _navigateToPrivacy,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ),
+            ],
           ),
           // Logo flotante
           AppLogoHeader(onTap: _navigateToWelcomePath),
@@ -659,18 +682,7 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
       ),
     );
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(_kBorderRadius),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    return _HoverableDestinationCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -679,6 +691,83 @@ class _DestinationsScreenState extends State<DestinationsScreen> {
           // Contenido siempre abajo
           contentWidget,
         ],
+      ),
+    );
+  }
+}
+
+/// Widget que maneja el efecto hover con elevación animada para tarjetas de destinos
+class _HoverableDestinationCard extends StatefulWidget {
+  final Widget child;
+
+  const _HoverableDestinationCard({required this.child});
+
+  @override
+  State<_HoverableDestinationCard> createState() => _HoverableDestinationCardState();
+}
+
+class _HoverableDestinationCardState extends State<_HoverableDestinationCard> with SingleTickerProviderStateMixin {
+  bool _isHovered = false;
+  late AnimationController _controller;
+  late Animation<double> _elevationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    _elevationAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        _controller.forward();
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        _controller.reverse();
+      },
+      child: AnimatedBuilder(
+        animation: _elevationAnimation,
+        builder: (context, child) {
+          final elevation = _elevationAnimation.value;
+          final shadowOffset = 8.0 + (elevation * 6.0);
+          final shadowBlur = 20.0 + (elevation * 15.0);
+          final shadowAlpha = 0.2 + (elevation * 0.15);
+
+          return Transform.translate(
+            offset: Offset(0, -elevation * 6),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16.0),
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: shadowAlpha),
+                    blurRadius: shadowBlur,
+                    offset: Offset(0, shadowOffset),
+                  ),
+                  if (_isHovered)
+                    BoxShadow(
+                      color: const Color(0xFF1D4ED8).withValues(alpha: 0.15 * elevation),
+                      blurRadius: shadowBlur * 1.2,
+                      offset: Offset(0, shadowOffset),
+                      spreadRadius: elevation * 2,
+                    ),
+                ],
+              ),
+              child: widget.child,
+            ),
+          );
+        },
       ),
     );
   }

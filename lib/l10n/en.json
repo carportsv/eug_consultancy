@@ -225,10 +225,14 @@
   "contacts": {
     "title": "Do you have any questions?",
     "subtitle": "We are here to help you",
+    "intro": "We are here to help you. Contact us through any of our channels and we will respond as soon as possible.",
     "phone": "Phone",
     "email": "Email",
+    "emailDesc": "Write to us at our email address",
     "website": "Website",
-    "location": "Location"
+    "websiteDesc": "Visit our official website",
+    "location": "Location",
+    "locationDesc": "We are located in Sicily, Italy"
   },
   "footer": {
     "description1": "Your definitive solution for reliable, elegant and personalized transfers.",
@@ -355,6 +359,7 @@
   "tours": {
     "title": "Tourist Tours",
     "subtitle": "Discover the beauty of Sicily with our personalized tours",
+    "intro": "Discover the beauty of Sicily with our personalized tours. Unique experiences designed for you, with professional guides and luxury vehicles.",
     "ourTours": "Our Tours",
     "ourToursDesc": "Unique experiences designed for you",
     "cityTitle": "City Tour",
@@ -381,6 +386,7 @@
   "weddings": {
     "title": "Weddings & Special Events",
     "subtitle": "We make your special day an unforgettable experience with our premium transportation service",
+    "intro": "We make your special day an unforgettable experience with our premium transportation service. Luxury vehicles, professional drivers and personalized attention for your wedding or special event.",
     "ourServices": "Our Services",
     "serviceTransportTitle": "Bride & Groom Transport",
     "serviceTransportDesc": "Luxury vehicles for the bride and groom",

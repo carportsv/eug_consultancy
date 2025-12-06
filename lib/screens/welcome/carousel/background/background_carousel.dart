@@ -62,37 +62,71 @@ class _BackgroundCarouselState extends State<BackgroundCarousel> {
         if (kDebugMode) {
           debugPrint('[BackgroundCarousel] Cargando imagen de fondo $index: $imagePath');
         }
-        return Image.asset(
-          imagePath,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
-          cacheWidth: 1920, // Limitar ancho para evitar distorsión
-          cacheHeight: 1080, // Limitar alto para evitar distorsión
-          filterQuality: FilterQuality.medium, // Balance entre calidad y rendimiento
-          errorBuilder: (context, error, stackTrace) {
-            if (kDebugMode) {
-              debugPrint('[BackgroundCarousel] ❌ Error cargando imagen de fondo: $imagePath');
-              debugPrint('[BackgroundCarousel] Error: ${error.toString()}');
-            }
-            // Mostrar un placeholder si falla
-            return Container(
-              color: Colors.grey.shade800,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.image_not_supported, color: Colors.grey.shade600, size: 48),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Imagen no disponible',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // Imagen de fondo con cover centrado
+            Image.asset(
+              imagePath,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              width: double.infinity,
+              height: double.infinity,
+              filterQuality: FilterQuality.medium,
+              errorBuilder: (context, error, stackTrace) {
+                if (kDebugMode) {
+                  debugPrint('[BackgroundCarousel] ❌ Error cargando imagen de fondo: $imagePath');
+                  debugPrint('[BackgroundCarousel] Error: ${error.toString()}');
+                }
+                return Container(
+                  color: Colors.grey.shade800,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.image_not_supported, color: Colors.grey.shade600, size: 48),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Imagen no disponible',
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                        ),
+                      ],
                     ),
+                  ),
+                );
+              },
+            ),
+            // Overlay sutil en los bordes superiores e inferiores
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.05),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.05),
                   ],
+                  stops: const [0.0, 0.3, 1.0],
                 ),
               ),
-            );
-          },
+            ),
+            // Overlay sutil en los bordes laterales
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.08),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.08),
+                  ],
+                  stops: const [0.0, 0.4, 1.0],
+                ),
+              ),
+            ),
+          ],
         );
       },
       onPageChanged: (index) {

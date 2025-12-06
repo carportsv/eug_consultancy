@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../l10n/locale_provider.dart';
+import '../../../widgets/safe_circle_avatar.dart';
 import 'hoverable_nav_item.dart';
 import 'language_selector.dart';
 
@@ -242,18 +243,12 @@ class WelcomeNavbar extends StatelessWidget implements PreferredSizeWidget {
                       shape: BoxShape.circle,
                       border: Border.all(color: textColor.withValues(alpha: 0.5), width: 2),
                     ),
-                    child: CircleAvatar(
+                    child: SafeCircleAvatar(
+                      imageUrl: currentUser!.photoURL,
                       radius: 18,
                       backgroundColor: textColor.withValues(alpha: 0.2),
-                      backgroundImage: currentUser!.photoURL != null
-                          ? NetworkImage(currentUser!.photoURL!)
-                          : null,
-                      onBackgroundImageError: (exception, stackTrace) {
-                        // Manejar errores de carga de imagen silenciosamente
-                      },
-                      child: currentUser!.photoURL == null
-                          ? Icon(Icons.person, color: textColor, size: 20)
-                          : null,
+                      iconColor: textColor,
+                      icon: Icons.person,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -311,16 +306,12 @@ class WelcomeNavbar extends StatelessWidget implements PreferredSizeWidget {
                             ),
                           ],
                         ),
-                        child: CircleAvatar(
+                        child: SafeCircleAvatar(
+                          imageUrl: currentUser!.photoURL,
                           radius: 32,
                           backgroundColor: _kPrimaryColor.withValues(alpha: 0.1),
-                          backgroundImage: currentUser!.photoURL != null
-                              ? NetworkImage(currentUser!.photoURL!)
-                              : null,
-                          onBackgroundImageError: (exception, stackTrace) {},
-                          child: currentUser!.photoURL == null
-                              ? Icon(Icons.person, color: _kPrimaryColor, size: 32)
-                              : null,
+                          iconColor: _kPrimaryColor,
+                          icon: Icons.person,
                         ),
                       ),
                       const SizedBox(width: 16),

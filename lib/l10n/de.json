@@ -243,10 +243,14 @@
   "contacts": {
     "title": "Haben Sie Fragen?",
     "subtitle": "Wir sind hier, um Ihnen zu helfen",
+    "intro": "Wir sind hier, um Ihnen zu helfen. Kontaktieren Sie uns über einen unserer Kanäle und wir werden Ihnen so schnell wie möglich antworten.",
     "phone": "Telefon",
     "email": "E-Mail",
+    "emailDesc": "Schreiben Sie uns an unsere E-Mail-Adresse",
     "website": "Website",
-    "location": "Standort"
+    "websiteDesc": "Besuchen Sie unsere offizielle Website",
+    "location": "Standort",
+    "locationDesc": "Wir befinden uns in Sizilien, Italien"
   },
   "footer": {
     "description1": "Ihre definitive Lösung für zuverlässige, elegante und personalisierte Transfers.",
@@ -346,6 +350,7 @@
   "tours": {
     "title": "Touristische Touren",
     "subtitle": "Entdecken Sie die Schönheit Siziliens mit unseren personalisierten Touren",
+    "intro": "Entdecken Sie die Schönheit Siziliens mit unseren personalisierten Touren. Einzigartige Erlebnisse für Sie gestaltet, mit professionellen Guides und Luxusfahrzeugen.",
     "ourTours": "Unsere Touren",
     "ourToursDesc": "Einzigartige Erlebnisse für Sie gestaltet",
     "cityTitle": "Stadttour",
@@ -372,6 +377,7 @@
   "weddings": {
     "title": "Hochzeiten & Besondere Events",
     "subtitle": "Wir machen Ihren besonderen Tag zu einem unvergesslichen Erlebnis mit unserem Premium-Transportservice",
+    "intro": "Wir machen Ihren besonderen Tag zu einem unvergesslichen Erlebnis mit unserem Premium-Transportservice. Luxusfahrzeuge, professionelle Fahrer und persönliche Betreuung für Ihre Hochzeit oder Ihr besonderes Event.",
     "ourServices": "Unsere Dienstleistungen",
     "serviceTransportTitle": "Brautpaar-Transport",
     "serviceTransportDesc": "Luxusfahrzeuge für das Brautpaar",

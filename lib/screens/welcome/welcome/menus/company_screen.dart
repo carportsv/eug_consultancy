@@ -10,7 +10,7 @@ import '../welcome_screen.dart';
 import 'destinations_screen.dart';
 import 'contacts_screen.dart';
 import 'servicios_screen.dart';
-import 'acerca_de_screen.dart';
+import 'profesionalidad.dart';
 import 'tours_screen.dart';
 import 'weddings_screen.dart';
 import 'terms_screen.dart';

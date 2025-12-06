@@ -10,7 +10,7 @@ import '../welcome_screen.dart';
 import 'destinations_screen.dart';
 import 'company_screen.dart';
 import 'contacts_screen.dart';
-import 'acerca_de_screen.dart';
+import 'profesionalidad.dart';
 import 'tours_screen.dart';
 import 'weddings_screen.dart';
 import 'terms_screen.dart';
@@ -481,68 +481,138 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
   }
 
   Widget _buildServiceCard(Map<String, dynamic> service, bool isTablet) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(_kBorderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            spreadRadius: 1,
-          ),
-        ],
+    return _HoverableServiceCard(
+      child: Padding(
+        padding: EdgeInsets.all(isTablet ? _kSpacing * 1.5 : _kSpacing),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Icono circular con fondo azul claro
+            Container(
+              width: isTablet ? 80 : 64,
+              height: isTablet ? 80 : 64,
+              decoration: BoxDecoration(
+                color: _kPrimaryColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+                border: Border.all(color: _kPrimaryColor.withValues(alpha: 0.3), width: 2),
+              ),
+              child: Icon(
+                service['icon'] as IconData,
+                color: _kPrimaryColor,
+                size: isTablet ? 36 : 28,
+              ),
+            ),
+            SizedBox(height: _kSpacing * 1.2),
+            // Título
+            Text(
+              service['title'] as String,
+              style: GoogleFonts.exo(
+                fontSize: isTablet ? 18 : 14,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1A202C),
+                height: 1.3,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: _kSpacing * 0.8),
+            // Descripción
+            Text(
+              service['description'] as String,
+              style: GoogleFonts.exo(
+                fontSize: isTablet ? 13 : 11,
+                color: Colors.grey.shade700,
+                height: 1.5,
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
-      padding: EdgeInsets.all(isTablet ? _kSpacing * 1.5 : _kSpacing),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Icono circular con fondo azul claro
-          Container(
-            width: isTablet ? 80 : 64,
-            height: isTablet ? 80 : 64,
-            decoration: BoxDecoration(
-              color: _kPrimaryColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-              border: Border.all(color: _kPrimaryColor.withValues(alpha: 0.3), width: 2),
+    );
+  }
+}
+
+/// Widget que maneja el efecto hover con elevación animada para tarjetas de servicios
+class _HoverableServiceCard extends StatefulWidget {
+  final Widget child;
+
+  const _HoverableServiceCard({required this.child});
+
+  @override
+  State<_HoverableServiceCard> createState() => _HoverableServiceCardState();
+}
+
+class _HoverableServiceCardState extends State<_HoverableServiceCard>
+    with SingleTickerProviderStateMixin {
+  bool _isHovered = false;
+  late AnimationController _controller;
+  late Animation<double> _elevationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    _elevationAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        _controller.forward();
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        _controller.reverse();
+      },
+      child: AnimatedBuilder(
+        animation: _elevationAnimation,
+        builder: (context, child) {
+          final elevation = _elevationAnimation.value;
+          final shadowOffset = 4.0 + (elevation * 4.0);
+          final shadowBlur = 10.0 + (elevation * 15.0);
+          final shadowSpread = 1.0 + (elevation * 2.0);
+          final shadowAlpha = 0.08 + (elevation * 0.12);
+
+          return Transform.translate(
+            offset: Offset(0, -elevation * 4),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(_kBorderRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: shadowAlpha),
+                    blurRadius: shadowBlur,
+                    offset: Offset(0, shadowOffset),
+                    spreadRadius: shadowSpread,
+                  ),
+                  if (_isHovered)
+                    BoxShadow(
+                      color: _kPrimaryColor.withValues(alpha: 0.1 * elevation),
+                      blurRadius: shadowBlur * 1.5,
+                      offset: Offset(0, shadowOffset),
+                      spreadRadius: shadowSpread * 1.5,
+                    ),
+                ],
+              ),
+              child: widget.child,
             ),
-            child: Icon(
-              service['icon'] as IconData,
-              color: _kPrimaryColor,
-              size: isTablet ? 36 : 28,
-            ),
-          ),
-          SizedBox(height: _kSpacing * 1.2),
-          // Título
-          Text(
-            service['title'] as String,
-            style: GoogleFonts.exo(
-              fontSize: isTablet ? 18 : 14,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1A202C),
-              height: 1.3,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          SizedBox(height: _kSpacing * 0.8),
-          // Descripción
-          Text(
-            service['description'] as String,
-            style: GoogleFonts.exo(
-              fontSize: isTablet ? 13 : 11,
-              color: Colors.grey.shade700,
-              height: 1.5,
-              fontWeight: FontWeight.w400,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 5,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          );
+        },
       ),
     );
   }

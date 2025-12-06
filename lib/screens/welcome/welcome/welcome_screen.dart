@@ -23,7 +23,7 @@ import 'menus/company_screen.dart';
 import 'menus/destinations_screen.dart';
 import 'menus/contacts_screen.dart';
 import 'menus/servicios_screen.dart';
-import 'menus/acerca_de_screen.dart';
+import 'menus/profesionalidad.dart';
 import 'menus/tours_screen.dart';
 import 'menus/weddings_screen.dart';
 import 'menus/terms_screen.dart';
@@ -1427,7 +1427,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         horizontal: isTablet ? _kSpacing * 1.5 : _kSpacing,
         vertical: _kSpacing * 0.5,
       ),
-      padding: EdgeInsets.all(isTablet ? _kSpacing * 2 : _kSpacing * 1.5),
+      padding: EdgeInsets.all(isTablet ? _kSpacing * 1.5 : _kSpacing),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(_kBorderRadius * 1.5),
@@ -1481,7 +1481,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               );
             },
           ),
-          SizedBox(height: _kSpacing * (isTablet ? 3 : 2)),
+          SizedBox(height: _kSpacing * (isTablet ? 2 : 1.5)),
           // Grid de características
           isTablet ? _buildFeaturesWideLayout(isTablet) : _buildFeaturesNarrowLayout(),
         ],
@@ -1543,14 +1543,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               l10n?.featuresFeature1Description ?? _getFeature1Text(),
               isTablet,
             ),
-            SizedBox(height: _kSpacing * 2.5),
+            SizedBox(height: _kSpacing * 1.5),
             _buildFeatureCard(
               2,
               l10n?.featuresFeature2Title ?? 'Experiencia',
               l10n?.featuresFeature2Description ?? _getFeature2Text(),
               isTablet,
             ),
-            SizedBox(height: _kSpacing * 2.5),
+            SizedBox(height: _kSpacing * 1.5),
             _buildFeatureCard(
               3,
               l10n?.featuresFeature3Title ?? 'Relax',
@@ -1571,14 +1571,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         Text(
           number.toString().padLeft(2, '0'),
           style: GoogleFonts.exo(
-            fontSize: isTablet ? 48 : 40,
+            fontSize: isTablet ? 40 : 32,
             fontWeight: FontWeight.w300,
             color: Colors.white,
             height: 1.0,
             letterSpacing: -2,
           ),
         ),
-        SizedBox(height: _kSpacing * 0.5),
+        SizedBox(height: _kSpacing * 0.3),
         // Título
         Text(
           title,
@@ -1590,7 +1590,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             letterSpacing: -0.3,
           ),
         ),
-        SizedBox(height: _kSpacing),
+        SizedBox(height: _kSpacing * 0.5),
         // Descripción
         Text(
           description,

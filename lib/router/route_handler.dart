@@ -189,10 +189,32 @@ class RouteHandler extends StatelessWidget {
           return const ContactsScreen();
         }
 
-        // Mostrar WelcomeScreen SOLO si es /welcome (no en la raíz)
+        // CRÍTICO: Verificar autenticación ANTES de mostrar WelcomeScreen
+        // Si el usuario está autenticado, debe ir a su pantalla según su rol, no a Welcome
+        final currentUser = FirebaseAuth.instance.currentUser;
+        final isAuthenticated = currentUser != null;
+
+        if (kDebugMode) {
+          debugPrint('[RouteHandler] Usuario autenticado: $isAuthenticated');
+          if (isAuthenticated) {
+            debugPrint('[RouteHandler] UID del usuario: ${currentUser.uid}');
+          }
+        }
+
+        // Si el usuario está autenticado, NO mostrar WelcomeScreen, ir a AuthGate para verificar rol
+        if (isAuthenticated) {
+          if (kDebugMode) {
+            debugPrint(
+              '[RouteHandler] Usuario autenticado detectado, redirigiendo a AuthGate para verificar rol',
+            );
+          }
+          return const AuthGate();
+        }
+
+        // Mostrar WelcomeScreen SOLO si NO está autenticado y es /welcome
         if (isWelcomePath || isWelcomeFragment || hasWelcomeInUrl) {
           if (kDebugMode) {
-            debugPrint('[RouteHandler] Showing WelcomeScreen (public for users)');
+            debugPrint('[RouteHandler] Showing WelcomeScreen (public for users, no auth)');
           }
           return const WelcomeScreen();
         }

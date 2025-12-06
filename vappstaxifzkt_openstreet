@@ -1,0 +1,53 @@
+[33mcommit bda4cb2c70a4019980d2219b47ba95925fd70a52[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: Carlos Portillo <carpo.sv@outlook.com>
+Date:   Thu Dec 4 20:31:12 2025 -0600
+
+    feat: términos completos, privacy policy, navegación total y optimizaciones
+    
+    - Términos y condiciones completos en 4 idiomas (10 secciones legales)
+    - Nueva pantalla Privacy Policy completa (GDPR compliant)
+    - Footer con Términos + Privacy en todas las pantallas (10 pantallas)
+    - Navegación corregida: Tours/Bodas accesibles desde todas las pantallas
+    - Navbar con texto adaptativo (negro en Tours/Bodas, blanco en resto)
+    - Facebook agregado a redes sociales del footer
+    - Imágenes de fondo: todas las 7 en uso y optimizadas (1920x1080)
+    - GitHub Actions actualizado con variables de WhatsApp y PayPal
+    - Documentación completa: env.example, CONFIGURACION_ENV.md, GITHUB_SECRETS_SETUP.md
+    - Validación mejorada en botón de WhatsApp
+    - 210+ nuevos campos de traducción en IT, ES, EN, DE
+
+ CONFIGURACION_ENV.md                               | 172 [32m++++++[m
+ GITHUB_SECRETS_SETUP.md                            | 258 [32m+++++++++[m
+ SESSION_SUMMARY.md                                 | 597 [32m+++++++++++++++++++++[m
+ assets/images/background/bg_1.jpg                  | Bin [31m904433[m -> [32m218242[m bytes
+ assets/images/background/bg_2.jpeg                 | Bin [31m75439[m -> [32m0[m bytes
+ assets/images/background/bg_2.jpg                  | Bin [31m0[m -> [32m23491[m bytes
+ assets/images/background/bg_3.jpg                  | Bin [31m997378[m -> [32m421562[m bytes
+ assets/images/background/bg_4.jpg                  | Bin [31m0[m -> [32m35757[m bytes
+ assets/images/background/bg_4.webp                 | Bin [31m23730[m -> [32m0[m bytes
+ assets/images/background/bg_5.jpg                  | Bin [31m75512[m -> [32m24129[m bytes
+ assets/images/background/bg_6.jpg                  | Bin [31m1180908[m -> [32m37553[m bytes
+ assets/images/background/bg_7.jpg                  | Bin [31m0[m -> [32m29423[m bytes
+ lib/l10n/app_localizations.dart                    | 115 [32m+++[m[31m-[m
+ lib/l10n/de.json                                   | 108 [32m+++[m[31m-[m
+ lib/l10n/en.json                                   | 108 [32m+++[m[31m-[m
+ lib/l10n/es.json                                   | 108 [32m+++[m[31m-[m
+ lib/l10n/it.json                                   | 108 [32m+++[m[31m-[m
+ .../carousel/background/background_carousel.dart   |   3 [32m+[m
+ .../carousel/background/background_data.dart       |   4 [32m+[m[31m-[m
+ lib/screens/welcome/navbar/hoverable_nav_item.dart |  15 [32m+[m[31m-[m
+ lib/screens/welcome/navbar/welcome_navbar.dart     | 138 [32m++[m[31m---[m
+ .../welcome/welcome/menus/acerca_de_screen.dart    |  63 [32m++[m[31m-[m
+ .../welcome/welcome/menus/company_screen.dart      |  63 [32m++[m[31m-[m
+ .../welcome/welcome/menus/contacts_screen.dart     |  63 [32m++[m[31m-[m
+ .../welcome/welcome/menus/destinations_screen.dart |  63 [32m++[m[31m-[m
+ .../welcome/menus/privacy_policy_screen.dart       | 404 [32m++++++++++++++[m
+ .../welcome/welcome/menus/servicios_screen.dart    |  63 [32m++[m[31m-[m
+ .../welcome/welcome/menus/terms_screen.dart        | 216 [32m+++++++[m[31m-[m
+ .../welcome/welcome/menus/tours_screen.dart        |  42 [32m++[m
+ .../welcome/welcome/menus/weddings_screen.dart     |  42 [32m++[m
+ lib/screens/welcome/welcome/welcome_screen.dart    |  92 [32m++[m[31m--[m
+ lib/shared/widgets/welcome_footer.dart             |  96 [32m+++[m[31m-[m
+ lib/shared/widgets/whatsapp_floating_button.dart   |  16 [32m+[m[31m-[m
+ pubspec.yaml                                       |   4 [32m+[m[31m-[m
+ 34 files changed, 2714 insertions(+), 247 deletions(-)

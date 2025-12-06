@@ -1,28 +1,37 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../l10n/app_localizations.dart';
-import '../../../../shared/widgets/whatsapp_floating_button.dart';
-import '../../../../shared/widgets/welcome_footer.dart';
 import '../../navbar/welcome_navbar.dart';
-import '../../../../auth/login_screen.dart';
+import '../../../../shared/widgets/welcome_footer.dart';
+import '../../../../shared/widgets/app_logo_header.dart';
 import '../welcome_screen.dart';
-import 'company_screen.dart';
-import 'servicios_screen.dart';
-import 'acerca_de_screen.dart';
 import 'destinations_screen.dart';
+import 'company_screen.dart';
 import 'contacts_screen.dart';
+import 'servicios_screen.dart';
+import 'profesionalidad.dart';
 import 'weddings_screen.dart';
 import 'terms_screen.dart';
 import 'privacy_policy_screen.dart';
+import '../../../../auth/login_screen.dart';
+import '../../../../l10n/app_localizations.dart';
 
 // Constants
-const _kPrimaryColor = Color(0xFF1D4ED8);
-const _kTextColor = Color(0xFF1A202C);
 const _kSpacing = 16.0;
 const _kBorderRadius = 12.0;
+const _kPrimaryColor = Color(0xFF1D4ED8);
+
+// Card dimensions - Mismo estilo que servicios
+const _kCardWidthTablet = 60.0;
+const _kCardHeightTablet = 25.0;
+const _kCardAspectRatioTablet = _kCardWidthTablet / _kCardHeightTablet;
+
+const _kCardWidthMobile = 60.0;
+const _kCardHeightMobile = 25.0;
+const _kCardAspectRatioMobile = _kCardWidthMobile / _kCardHeightMobile;
 
 /// Pantalla de Tours turísticos
 class ToursScreen extends StatefulWidget {
@@ -43,10 +52,16 @@ class _ToursScreenState extends State<ToursScreen> {
     try {
       firebaseInitialized = Firebase.apps.isNotEmpty;
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ⚠️ Error verificando Firebase: $e');
+      }
       firebaseInitialized = false;
     }
 
     if (!firebaseInitialized) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ⚠️ Firebase no inicializado');
+      }
       _currentUser = null;
       return;
     }
@@ -59,6 +74,9 @@ class _ToursScreenState extends State<ToursScreen> {
         }
       });
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ⚠️ Error obteniendo usuario: $e');
+      }
       _currentUser = null;
     }
   }
@@ -96,7 +114,7 @@ class _ToursScreenState extends State<ToursScreen> {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${l10n?.logoutError ?? 'Error al cerrar sesión'}: $e'),
+            content: Text('${l10n?.logoutError ?? 'Error al cerrar sesión'}: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -105,398 +123,569 @@ class _ToursScreenState extends State<ToursScreen> {
   }
 
   void _navigateToWelcomePath() {
+    if (kDebugMode) {
+      debugPrint('[ToursScreen] _navigateToWelcomePath llamado');
+    }
     if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (context) => const WelcomeScreen()));
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const WelcomeScreen()));
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ❌ Error navegando a WelcomeScreen: $e');
+        debugPrint('[ToursScreen] Stack trace: $stackTrace');
+      }
+      try {
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const WelcomeScreen()));
+      } catch (e2) {
+        if (kDebugMode) {
+          debugPrint('[ToursScreen] ❌ Error en fallback también: $e2');
+        }
+      }
+    }
+  }
+
+  void _navigateToCompany() {
+    if (kDebugMode) {
+      debugPrint('[ToursScreen] _navigateToCompany llamado');
+    }
+    if (!mounted) return;
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const CompanyScreen()));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ❌ Error navegando a CompanyScreen: $e');
+      }
+    }
+  }
+
+  void _navigateToServices() {
+    if (kDebugMode) {
+      debugPrint('[ToursScreen] _navigateToServices llamado');
+    }
+    if (!mounted) return;
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const ServiciosScreen()));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ❌ Error navegando a ServiciosScreen: $e');
+      }
+    }
+  }
+
+  void _navigateToDestination() {
+    if (kDebugMode) {
+      debugPrint('[ToursScreen] _navigateToDestination llamado');
+    }
+    if (!mounted) return;
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const DestinationsScreen()));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ❌ Error navegando a DestinationsScreen: $e');
+      }
+    }
+  }
+
+  void _navigateToContacts() {
+    if (kDebugMode) {
+      debugPrint('[ToursScreen] _navigateToContacts llamado');
+    }
+    if (!mounted) return;
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const ContactsScreen()));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ❌ Error navegando a ContactsScreen: $e');
+      }
+    }
+  }
+
+  void _navigateToAbout() {
+    if (kDebugMode) {
+      debugPrint('[ToursScreen] _navigateToAbout llamado');
+    }
+    if (!mounted) return;
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const AcercaDeScreen()));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ❌ Error navegando a AcercaDeScreen: $e');
+      }
+    }
+  }
+
+  void _navigateToWeddings() {
+    if (!mounted) return;
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const WeddingsScreen()));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ❌ Error navegando a WeddingsScreen: $e');
+      }
+    }
+  }
+
+  void _navigateToTerms() {
+    if (!mounted) return;
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const TermsScreen()));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ❌ Error navegando a TermsScreen: $e');
+      }
+    }
+  }
+
+  void _navigateToPrivacy() {
+    if (!mounted) return;
+    try {
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ToursScreen] ❌ Error navegando a PrivacyPolicyScreen: $e');
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 900;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      appBar: WelcomeNavbar(
-        isDarkBackground: false, // Texto negro para fondo claro
-        currentUser: _currentUser,
-        onNavigateToLogin: _navigateToLogin,
-        onNavigateToProfile: _navigateToProfile,
-        onHandleLogout: _handleLogout,
-        onNavigateToWelcomePath: _navigateToWelcomePath,
-        onNavigateToCompany: () {
-          Navigator.of(
-            context,
-          ).pushReplacement(MaterialPageRoute(builder: (context) => const CompanyScreen()));
-        },
-        onNavigateToServices: () {
-          Navigator.of(
-            context,
-          ).pushReplacement(MaterialPageRoute(builder: (context) => const ServiciosScreen()));
-        },
-        onNavigateToAbout: () {
-          Navigator.of(
-            context,
-          ).pushReplacement(MaterialPageRoute(builder: (context) => const AcercaDeScreen()));
-        },
-        onNavigateToDestination: () {
-          Navigator.of(
-            context,
-          ).pushReplacement(MaterialPageRoute(builder: (context) => const DestinationsScreen()));
-        },
-        onNavigateToContacts: () {
-          Navigator.of(
-            context,
-          ).pushReplacement(MaterialPageRoute(builder: (context) => const ContactsScreen()));
-        },
-        onNavigateToTours: null,
-        onNavigateToWeddings: () {
-          Navigator.of(
-            context,
-          ).pushReplacement(MaterialPageRoute(builder: (context) => const WeddingsScreen()));
-        },
-        onNavigateToTerms: () {
-          Navigator.of(
-            context,
-          ).pushReplacement(MaterialPageRoute(builder: (context) => const TermsScreen()));
-        },
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeroSection(context),
-            const SizedBox(height: _kSpacing * 4),
-            _buildToursGrid(context),
-            const SizedBox(height: _kSpacing * 4),
-            _buildWhyChooseUs(context),
-            const SizedBox(height: _kSpacing * 4),
-            // Footer
-            WelcomeFooter(
-              onNavigateToWelcome: _navigateToWelcomePath,
-              onNavigateToDestination: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const DestinationsScreen()),
-                );
-              },
-              onNavigateToCompany: () {
-                Navigator.of(
-                  context,
-                ).pushReplacement(MaterialPageRoute(builder: (context) => const CompanyScreen()));
-              },
-              onNavigateToContacts: () {
-                Navigator.of(
-                  context,
-                ).pushReplacement(MaterialPageRoute(builder: (context) => const ContactsScreen()));
-              },
-              onNavigateToServices: () {
-                Navigator.of(
-                  context,
-                ).pushReplacement(MaterialPageRoute(builder: (context) => const ServiciosScreen()));
-              },
-              onNavigateToAbout: () {
-                Navigator.of(
-                  context,
-                ).pushReplacement(MaterialPageRoute(builder: (context) => const AcercaDeScreen()));
-              },
-              onNavigateToTerms: () {
-                Navigator.of(
-                  context,
-                ).pushReplacement(MaterialPageRoute(builder: (context) => const TermsScreen()));
-              },
-              onNavigateToPrivacy: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
-                );
-              },
+      extendBodyBehindAppBar: false,
+      backgroundColor: Colors.white,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF1C1C1C).withValues(alpha: 0.95),
+                const Color(0xFF000000).withValues(alpha: 0.95),
+              ],
             ),
-          ],
+          ),
+          child: WelcomeNavbar(
+            currentUser: _currentUser,
+            onNavigateToLogin: _navigateToLogin,
+            onNavigateToProfile: _navigateToProfile,
+            onHandleLogout: _handleLogout,
+            onNavigateToWelcomePath: _navigateToWelcomePath,
+            onNavigateToCompany: _navigateToCompany,
+            onNavigateToServices: _navigateToServices,
+            onNavigateToAbout: _navigateToAbout,
+            onNavigateToDestination: _navigateToDestination,
+            onNavigateToContacts: _navigateToContacts,
+            onNavigateToTours: null, // Ya estamos aquí
+            onNavigateToWeddings: _navigateToWeddings,
+            onNavigateToTerms: _navigateToTerms,
+          ),
         ),
       ),
-      floatingActionButton: Builder(
-        builder: (context) {
-          final l10n = AppLocalizations.of(context);
-          return WhatsAppFloatingButton(
-            prefilledMessage:
-                l10n?.whatsappMessageWelcome ?? 'Hola, necesito información sobre tours',
-          );
-        },
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              // Contenido principal
+              Expanded(
+                child: Stack(
+                  children: [
+                    // Fondo blanco
+                    Container(color: Colors.white),
+                    SafeArea(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            isTablet ? 48.0 : 24.0,
+                            isTablet ? 24.0 : 16.0,
+                            isTablet ? 48.0 : 24.0,
+                            8.0,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: _kSpacing), // Espacio para el navbar
+                              // Contenido principal
+                              _buildIntroSection(isTablet),
+                              SizedBox(height: _kSpacing * (isTablet ? 2 : 1.5)),
+                              _buildToursGrid(isTablet),
+                              SizedBox(height: _kSpacing * (isTablet ? 3 : 2)),
+                              _buildWhyChooseUs(isTablet),
+                              const SizedBox(height: _kSpacing * 2),
+                              // Footer
+                              WelcomeFooter(
+                                onNavigateToWelcome: _navigateToWelcomePath,
+                                onNavigateToDestination: _navigateToDestination,
+                                onNavigateToCompany: _navigateToCompany,
+                                onNavigateToContacts: _navigateToContacts,
+                                onNavigateToServices: _navigateToServices,
+                                onNavigateToAbout: _navigateToAbout,
+                                onNavigateToTerms: _navigateToTerms,
+                                onNavigateToPrivacy: _navigateToPrivacy,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // Logo flotante
+          AppLogoHeader(onTap: _navigateToWelcomePath),
+        ],
       ),
     );
   }
 
-  Widget _buildHeroSection(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: _kSpacing * 6, horizontal: _kSpacing * 3),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_kPrimaryColor, _kPrimaryColor.withValues(alpha: 0.8)],
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.tour, size: 80, color: Colors.white.withValues(alpha: 0.9)),
-          const SizedBox(height: _kSpacing * 2),
-          Text(
-            l10n?.toursTitle ?? 'Tours Turísticos',
-            style: GoogleFonts.exo(
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: -1,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: _kSpacing),
-          Container(
-            constraints: const BoxConstraints(maxWidth: 600),
+  Widget _buildIntroSection(bool isTablet) {
+    return Builder(
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return Center(
+          child: Container(
+            constraints: BoxConstraints(maxWidth: isTablet ? 1500 : double.infinity),
             child: Text(
-              l10n?.toursSubtitle ??
-                  'Descubre la belleza de Sicilia con nuestros tours personalizados',
+              l10n?.toursIntro ??
+                  'Descubre la belleza de Sicilia con nuestros tours personalizados. Experiencias únicas diseñadas para ti, con guías profesionales y vehículos de lujo.',
               style: GoogleFonts.exo(
-                fontSize: 18,
-                color: Colors.white.withValues(alpha: 0.95),
-                height: 1.6,
+                fontSize: isTablet ? 18 : 16,
+                color: const Color(0xFF1A202C),
+                height: 1.5,
+                fontWeight: FontWeight.w400,
               ),
               textAlign: TextAlign.center,
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildToursGrid(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isWide = screenWidth > 900;
+  Widget _buildToursGrid(bool isTablet) {
+    return Builder(
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        final tours = [
+          {
+            'icon': Icons.location_city,
+            'title': l10n?.toursCityTitle ?? 'Tour por la Ciudad',
+            'description':
+                l10n?.toursCityDesc ??
+                'Explora los lugares más emblemáticos de Sicilia con nuestro tour guiado por la ciudad.',
+          },
+          {
+            'icon': Icons.museum,
+            'title': l10n?.toursHistoricalTitle ?? 'Tour Histórico',
+            'description':
+                l10n?.toursHistoricalDesc ??
+                'Descubre la rica historia y cultura siciliana visitando monumentos y sitios históricos.',
+          },
+          {
+            'icon': Icons.restaurant,
+            'title': l10n?.toursGastronomicTitle ?? 'Tour Gastronómico',
+            'description':
+                l10n?.toursGastronomicDesc ??
+                'Degusta la auténtica cocina siciliana en los mejores restaurantes locales.',
+          },
+          {
+            'icon': Icons.beach_access,
+            'title': l10n?.toursCoastalTitle ?? 'Tour Costero',
+            'description':
+                l10n?.toursCoastalDesc ??
+                'Disfruta de las playas más hermosas y paisajes costeros de Sicilia.',
+          },
+          {
+            'icon': Icons.landscape,
+            'title': l10n?.toursNatureTitle ?? 'Tour Natural',
+            'description':
+                l10n?.toursNatureDesc ??
+                'Explora la naturaleza y paisajes sicilianos con rutas escénicas.',
+          },
+          {
+            'icon': Icons.wine_bar,
+            'title': l10n?.toursWineTitle ?? 'Tour de Vinos',
+            'description':
+                l10n?.toursWineDesc ??
+                'Visita viñedos y cata vinos locales en las mejores bodegas de la región.',
+          },
+        ];
 
-    final tours = [
-      {
-        'icon': Icons.location_city,
-        'title': l10n?.toursCityTitle ?? 'Tour por la Ciudad',
-        'description': l10n?.toursCityDesc ?? 'Explora los lugares más emblemáticos de Sicilia',
-        'duration': l10n?.toursDuration ?? '4 horas',
-        'color': Colors.blue,
-      },
-      {
-        'icon': Icons.museum,
-        'title': l10n?.toursHistoricalTitle ?? 'Tour Histórico',
-        'description': l10n?.toursHistoricalDesc ?? 'Descubre la rica historia y cultura siciliana',
-        'duration': l10n?.toursDuration ?? '6 horas',
-        'color': Colors.orange,
-      },
-      {
-        'icon': Icons.restaurant,
-        'title': l10n?.toursGastronomicTitle ?? 'Tour Gastronómico',
-        'description': l10n?.toursGastronomicDesc ?? 'Degusta la auténtica cocina siciliana',
-        'duration': l10n?.toursDuration ?? '5 horas',
-        'color': Colors.red,
-      },
-      {
-        'icon': Icons.beach_access,
-        'title': l10n?.toursCoastalTitle ?? 'Tour Costero',
-        'description': l10n?.toursCoastalDesc ?? 'Disfruta de las playas más hermosas',
-        'duration': l10n?.toursDuration ?? '8 horas',
-        'color': Colors.teal,
-      },
-      {
-        'icon': Icons.landscape,
-        'title': l10n?.toursNatureTitle ?? 'Tour Natural',
-        'description': l10n?.toursNatureDesc ?? 'Explora la naturaleza y paisajes sicilianos',
-        'duration': l10n?.toursDuration ?? '7 horas',
-        'color': Colors.green,
-      },
-      {
-        'icon': Icons.wine_bar,
-        'title': l10n?.toursWineTitle ?? 'Tour de Vinos',
-        'description': l10n?.toursWineDesc ?? 'Visita viñedos y cata vinos locales',
-        'duration': l10n?.toursDuration ?? '5 horas',
-        'color': Colors.purple,
-      },
-    ];
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: _kSpacing * 3),
-      child: Column(
-        children: [
-          Text(
-            l10n?.toursOurTours ?? 'Nuestros Tours',
-            style: GoogleFonts.exo(fontSize: 36, fontWeight: FontWeight.bold, color: _kTextColor),
-          ),
-          const SizedBox(height: _kSpacing),
-          Text(
-            l10n?.toursOurToursDesc ?? 'Experiencias únicas diseñadas para ti',
-            style: GoogleFonts.exo(fontSize: 16, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: _kSpacing * 4),
-          GridView.builder(
+        if (isTablet) {
+          // Grid de 3 columnas en tablet
+          return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: isWide ? 3 : (screenWidth > 600 ? 2 : 1),
+              crossAxisCount: 3,
               crossAxisSpacing: _kSpacing * 2,
               mainAxisSpacing: _kSpacing * 2,
-              childAspectRatio: isWide ? 0.85 : 0.9,
+              childAspectRatio: _kCardAspectRatioTablet,
             ),
             itemCount: tours.length,
-            itemBuilder: (context, index) => _buildTourCard(tours[index]),
-          ),
-        ],
+            itemBuilder: (context, index) => _buildTourCard(tours[index], isTablet),
+          );
+        } else {
+          // Grid de 2 columnas en móvil
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: _kSpacing,
+              mainAxisSpacing: _kSpacing,
+              childAspectRatio: _kCardAspectRatioMobile,
+            ),
+            itemCount: tours.length,
+            itemBuilder: (context, index) => _buildTourCard(tours[index], isTablet),
+          );
+        }
+      },
+    );
+  }
+
+  Widget _buildTourCard(Map<String, dynamic> tour, bool isTablet) {
+    return _HoverableTourCard(
+      child: Padding(
+        padding: EdgeInsets.all(isTablet ? _kSpacing * 1.5 : _kSpacing),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Icono circular con fondo azul claro
+            Container(
+              width: isTablet ? 80 : 64,
+              height: isTablet ? 80 : 64,
+              decoration: BoxDecoration(
+                color: _kPrimaryColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+                border: Border.all(color: _kPrimaryColor.withValues(alpha: 0.3), width: 2),
+              ),
+              child: Icon(
+                tour['icon'] as IconData,
+                color: _kPrimaryColor,
+                size: isTablet ? 36 : 28,
+              ),
+            ),
+            SizedBox(height: _kSpacing * 1.2),
+            // Título
+            Text(
+              tour['title'] as String,
+              style: GoogleFonts.exo(
+                fontSize: isTablet ? 18 : 14,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1A202C),
+                height: 1.3,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: _kSpacing * 0.8),
+            // Descripción
+            Text(
+              tour['description'] as String,
+              style: GoogleFonts.exo(
+                fontSize: isTablet ? 13 : 11,
+                color: Colors.grey.shade700,
+                height: 1.5,
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTourCard(Map<String, dynamic> tour) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(_kBorderRadius * 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header con ícono y color
-          Container(
-            height: 180,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [tour['color'], (tour['color'] as Color).withValues(alpha: 0.7)],
+  Widget _buildWhyChooseUs(bool isTablet) {
+    return Builder(
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(isTablet ? _kSpacing * 4 : _kSpacing * 2),
+          color: Colors.white,
+          child: Column(
+            children: [
+              Text(
+                l10n?.toursWhyChooseUs ?? '¿Por qué elegirnos?',
+                style: GoogleFonts.exo(
+                  fontSize: isTablet ? 32 : 28,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A202C),
+                ),
               ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(_kBorderRadius * 1.5),
-                topRight: Radius.circular(_kBorderRadius * 1.5),
-              ),
-            ),
-            child: Center(child: Icon(tour['icon'], size: 80, color: Colors.white)),
-          ),
-          // Contenido
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(_kSpacing * 1.5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              SizedBox(height: _kSpacing * (isTablet ? 3 : 2)),
+              Wrap(
+                spacing: _kSpacing * (isTablet ? 3 : 2),
+                runSpacing: _kSpacing * (isTablet ? 3 : 2),
+                alignment: WrapAlignment.center,
                 children: [
-                  Text(
-                    tour['title'],
-                    style: GoogleFonts.exo(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: _kTextColor,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  _buildFeature(
+                    Icons.verified_user,
+                    l10n?.toursFeature1Title ?? 'Guías Profesionales',
+                    l10n?.toursFeature1Desc ?? 'Expertos locales certificados',
+                    isTablet,
                   ),
-                  const SizedBox(height: _kSpacing * 0.5),
-                  Text(
-                    tour['description'],
-                    style: GoogleFonts.exo(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                  _buildFeature(
+                    Icons.groups,
+                    l10n?.toursFeature2Title ?? 'Grupos Pequeños',
+                    l10n?.toursFeature2Desc ?? 'Experiencia personalizada',
+                    isTablet,
                   ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time, size: 16, color: Colors.grey.shade600),
-                      const SizedBox(width: 6),
-                      Text(
-                        tour['duration'],
-                        style: GoogleFonts.exo(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  _buildFeature(
+                    Icons.star,
+                    l10n?.toursFeature3Title ?? 'Mejor Valoración',
+                    l10n?.toursFeature3Desc ?? '5 estrellas en reseñas',
+                    isTablet,
                   ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWhyChooseUs(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(_kSpacing * 4),
-      color: Colors.white,
-      child: Column(
-        children: [
-          Text(
-            l10n?.toursWhyChooseUs ?? '¿Por qué elegirnos?',
-            style: GoogleFonts.exo(fontSize: 32, fontWeight: FontWeight.bold, color: _kTextColor),
-          ),
-          const SizedBox(height: _kSpacing * 3),
-          Wrap(
-            spacing: _kSpacing * 3,
-            runSpacing: _kSpacing * 3,
-            alignment: WrapAlignment.center,
-            children: [
-              _buildFeature(
-                Icons.verified_user,
-                l10n?.toursFeature1Title ?? 'Guías Profesionales',
-                l10n?.toursFeature1Desc ?? 'Expertos locales certificados',
-              ),
-              _buildFeature(
-                Icons.groups,
-                l10n?.toursFeature2Title ?? 'Grupos Pequeños',
-                l10n?.toursFeature2Desc ?? 'Experiencia personalizada',
-              ),
-              _buildFeature(
-                Icons.star,
-                l10n?.toursFeature3Title ?? 'Mejor Valoración',
-                l10n?.toursFeature3Desc ?? '5 estrellas en reseñas',
-              ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildFeature(IconData icon, String title, String description) {
+  Widget _buildFeature(IconData icon, String title, String description, bool isTablet) {
     return SizedBox(
-      width: 250,
+      width: isTablet ? 250 : 200,
       child: Column(
         children: [
           Container(
-            width: 80,
-            height: 80,
+            width: isTablet ? 80 : 70,
+            height: isTablet ? 80 : 70,
             decoration: BoxDecoration(
               color: _kPrimaryColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 40, color: _kPrimaryColor),
+            child: Icon(icon, size: isTablet ? 40 : 35, color: _kPrimaryColor),
           ),
-          const SizedBox(height: _kSpacing),
+          SizedBox(height: _kSpacing),
           Text(
             title,
-            style: GoogleFonts.exo(fontSize: 18, fontWeight: FontWeight.bold, color: _kTextColor),
+            style: GoogleFonts.exo(
+              fontSize: isTablet ? 18 : 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF1A202C),
+            ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: _kSpacing * 0.5),
+          SizedBox(height: _kSpacing * 0.5),
           Text(
             description,
-            style: GoogleFonts.exo(fontSize: 14, color: Colors.grey.shade600),
+            style: GoogleFonts.exo(fontSize: isTablet ? 14 : 13, color: Colors.grey.shade600),
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Widget que maneja el efecto hover con elevación animada para tarjetas de tours
+class _HoverableTourCard extends StatefulWidget {
+  final Widget child;
+
+  const _HoverableTourCard({required this.child});
+
+  @override
+  State<_HoverableTourCard> createState() => _HoverableTourCardState();
+}
+
+class _HoverableTourCardState extends State<_HoverableTourCard>
+    with SingleTickerProviderStateMixin {
+  bool _isHovered = false;
+  late AnimationController _controller;
+  late Animation<double> _elevationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    _elevationAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        _controller.forward();
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        _controller.reverse();
+      },
+      child: AnimatedBuilder(
+        animation: _elevationAnimation,
+        builder: (context, child) {
+          final elevation = _elevationAnimation.value;
+          final shadowOffset = 4.0 + (elevation * 4.0);
+          final shadowBlur = 10.0 + (elevation * 15.0);
+          final shadowSpread = 1.0 + (elevation * 2.0);
+          final shadowAlpha = 0.08 + (elevation * 0.12);
+
+          return Transform.translate(
+            offset: Offset(0, -elevation * 4),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(_kBorderRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: shadowAlpha),
+                    blurRadius: shadowBlur,
+                    offset: Offset(0, shadowOffset),
+                    spreadRadius: shadowSpread,
+                  ),
+                  if (_isHovered)
+                    BoxShadow(
+                      color: _kPrimaryColor.withValues(alpha: 0.1 * elevation),
+                      blurRadius: shadowBlur * 1.5,
+                      offset: Offset(0, shadowOffset),
+                      spreadRadius: shadowSpread * 1.5,
+                    ),
+                ],
+              ),
+              child: widget.child,
+            ),
+          );
+        },
       ),
     );
   }
