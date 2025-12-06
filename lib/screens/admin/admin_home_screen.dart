@@ -32,6 +32,8 @@ import 'pricing/vouchers_screen.dart';
 import '../../auth/login_screen.dart';
 import '../../auth/supabase_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -44,6 +46,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   bool _isDrawerExpanded = true;
   Widget _selectedContent = const _HomeDashboardContent();
   final SupabaseService _supabaseService = SupabaseService();
+  RealtimeChannel? _realtimeChannel;
 
   // Contadores de bookings
   int _bookingsNewCount = 0;
@@ -64,6 +67,47 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   void initState() {
     super.initState();
     _loadBookingCounts();
+    _setupRealtimeSubscription();
+  }
+
+  @override
+  void dispose() {
+    // Limpiar suscripción en tiempo real
+    _realtimeChannel?.unsubscribe();
+    super.dispose();
+  }
+
+  void _setupRealtimeSubscription() {
+    try {
+      final supabaseClient = _supabaseService.client;
+
+      // Suscribirse a cambios en la tabla ride_requests
+      _realtimeChannel = supabaseClient
+          .channel('admin-booking-counts')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'ride_requests',
+            callback: (payload) {
+              if (kDebugMode) {
+                debugPrint(
+                  '[AdminHomeScreen] 🔔 Cambio detectado en ride_requests: ${payload.eventType}',
+                );
+              }
+              // Recargar contadores cuando hay un cambio
+              _loadBookingCounts();
+            },
+          )
+          .subscribe();
+
+      if (kDebugMode) {
+        debugPrint('[AdminHomeScreen] ✅ Suscripción en tiempo real configurada');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[AdminHomeScreen] ❌ Error configurando suscripción en tiempo real: $e');
+      }
+    }
   }
 
   Future<void> _loadBookingCounts() async {
