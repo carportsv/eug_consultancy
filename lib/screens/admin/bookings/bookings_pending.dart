@@ -1222,10 +1222,7 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
         'type': 'ride_request',
         'title': '🚗 Nuevo viaje asignado',
         'message': 'Viaje: $origin → $destination',
-        'data': {
-          'ride_id': rideId,
-          'action': 'driver_accept_reject',
-        },
+        'data': {'ride_id': rideId, 'action': 'driver_accept_reject'},
         'driver_id': driverId,
         'is_read': false,
       });
@@ -1546,7 +1543,13 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
                                             throw Exception('ID del viaje no válido');
                                           }
 
-                                          await supabaseClient
+                                          if (kDebugMode) {
+                                            debugPrint(
+                                              '[BookingsPending] Asignando driver: rideId=$rideId, driverId=$selectedDriverId, status=assigned',
+                                            );
+                                          }
+
+                                          final updateResult = await supabaseClient
                                               .from('ride_requests')
                                               .update({
                                                 'driver_id': selectedDriverId,
@@ -1555,14 +1558,23 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
                                               })
                                               .eq('id', rideId);
 
+                                          if (kDebugMode) {
+                                            debugPrint(
+                                              '[BookingsPending] Update result: $updateResult',
+                                            );
+                                          }
+
                                           // Crear notificación para el driver asignado
                                           await _createDriverNotification(
                                             rideId: rideId,
                                             driverId: selectedDriverId!,
                                             origin:
-                                                (ride['origin'] as Map?)?['address']?.toString() ?? 'Origen',
+                                                (ride['origin'] as Map?)?['address']?.toString() ??
+                                                'Origen',
                                             destination:
-                                                (ride['destination'] as Map?)?['address']?.toString() ?? 'Destino',
+                                                (ride['destination'] as Map?)?['address']
+                                                    ?.toString() ??
+                                                'Destino',
                                           );
 
                                           if (!mounted) return;
@@ -1584,7 +1596,18 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
                                           );
                                           // Recargar la lista
                                           _loadPendingRides();
+
+                                          if (kDebugMode) {
+                                            debugPrint(
+                                              '[BookingsPending] Driver asignado exitosamente, recargando lista...',
+                                            );
+                                          }
                                         } catch (e) {
+                                          if (kDebugMode) {
+                                            debugPrint(
+                                              '[BookingsPending] Error al asignar driver: $e',
+                                            );
+                                          }
                                           if (!mounted) return;
                                           if (!buttonContext.mounted) return;
 

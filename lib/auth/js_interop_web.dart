@@ -2,11 +2,18 @@
 import 'dart:async';
 import 'dart:js_interop';
 
-// Función helper externa para llamar then en una promesa
-@JS('Promise.prototype.then')
-external JSObject? _promiseThen(JSObject promise, JSFunction onResolve, [JSFunction? onReject]);
+// Función helper para llamar then en una promesa usando interop
+void _callPromiseThen(JSObject promise, JSFunction onResolve, JSFunction onReject) {
+  // Acceder al método then de la promesa y llamarlo
+  // En JS: promise.then(onResolve, onReject)
+  final thenMethod = (promise as dynamic).then;
+  if (thenMethod != null && thenMethod is Function) {
+    thenMethod(onResolve, onReject);
+  }
+}
 
 // Extensión para convertir JSPromise a Future
+// Esta extensión debe estar disponible cuando se importa este archivo
 extension JSPromiseExtension<T extends JSAny?> on JSPromise<T> {
   Future<T> get toDart {
     final completer = Completer<T>();
@@ -26,8 +33,8 @@ extension JSPromiseExtension<T extends JSAny?> on JSPromise<T> {
       }
     }).toJS;
 
-    // Llamar a then usando la función externa
-    _promiseThen(promise, onResolve, onReject);
+    // Llamar a then usando la función helper
+    _callPromiseThen(promise, onResolve, onReject);
 
     return completer.future;
   }

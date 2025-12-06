@@ -56,18 +56,17 @@ class _BookingsAssignedScreenState extends State<BookingsAssignedScreen> {
       }
 
       // Consulta para bookings con status 'assigned'
+      // No filtramos por driver_id porque si el status es 'assigned', ya tiene driver
       var assignedQuery = supabaseClient
           .from('ride_requests')
           .select(selectQuery)
-          .eq('status', 'assigned')
-          .not('driver_id', 'is', null);
+          .eq('status', 'assigned');
 
       // Consulta para bookings con status 'accepted'
       var acceptedQuery = supabaseClient
           .from('ride_requests')
           .select(selectQuery)
-          .eq('status', 'accepted')
-          .not('driver_id', 'is', null);
+          .eq('status', 'accepted');
 
       // Aplicar filtros de fecha si existen
       if (dateFilter != null && endDateFilter != null) {
@@ -76,12 +75,29 @@ class _BookingsAssignedScreenState extends State<BookingsAssignedScreen> {
       }
 
       // Ejecutar ambas consultas en paralelo
+      if (kDebugMode) {
+        debugPrint('[BookingsAssigned] Ejecutando consulta para status "assigned"...');
+      }
       final assignedResponse = await assignedQuery.order('created_at', ascending: false);
+
+      if (kDebugMode) {
+        debugPrint('[BookingsAssigned] Ejecutando consulta para status "accepted"...');
+      }
       final acceptedResponse = await acceptedQuery.order('created_at', ascending: false);
 
       // Combinar los resultados y eliminar duplicados
       final assignedList = (assignedResponse as List).cast<Map<String, dynamic>>();
       final acceptedList = (acceptedResponse as List).cast<Map<String, dynamic>>();
+
+      if (kDebugMode) {
+        debugPrint('[BookingsAssigned] Bookings con status "assigned": ${assignedList.length}');
+        debugPrint('[BookingsAssigned] Bookings con status "accepted": ${acceptedList.length}');
+        for (var ride in assignedList) {
+          debugPrint(
+            '[BookingsAssigned] Assigned - ID: ${ride['id']}, Status: ${ride['status']}, Driver ID: ${ride['driver_id']}',
+          );
+        }
+      }
 
       // Usar un Set para eliminar duplicados basado en el ID
       final Map<String, Map<String, dynamic>> uniqueRides = {};
