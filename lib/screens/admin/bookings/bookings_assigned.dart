@@ -43,7 +43,8 @@ class _BookingsAssignedScreenState extends State<BookingsAssignedScreen> {
       // Los viajes con status 'accepted' ya fueron aceptados por el driver
       final selectQuery = '''
         *,
-        user:users!ride_requests_user_id_fkey(id, email, display_name, phone_number)
+        user:users!ride_requests_user_id_fkey(id, email, display_name, phone_number),
+        driver:drivers!ride_requests_driver_id_fkey(id, user:users!drivers_user_id_fkey(id, display_name, email))
       ''';
 
       // Preparar filtros de fecha si existen
@@ -83,15 +84,13 @@ class _BookingsAssignedScreenState extends State<BookingsAssignedScreen> {
       if (kDebugMode) {
         debugPrint('[BookingsAssigned] Ejecutando consulta para "requested" con driver_id...');
       }
-      final requestedWithDriverResponse = await requestedWithDriverQuery.order(
-        'created_at',
-        ascending: false,
-      );
+      // Obtener sin ordenar, ordenaremos después por fecha del viaje
+      final requestedWithDriverResponse = await requestedWithDriverQuery;
 
       if (kDebugMode) {
         debugPrint('[BookingsAssigned] Ejecutando consulta para status "accepted"...');
       }
-      final acceptedResponse = await acceptedQuery.order('created_at', ascending: false);
+      final acceptedResponse = await acceptedQuery;
 
       // Combinar los resultados y eliminar duplicados
       final requestedWithDriverList = (requestedWithDriverResponse as List)
@@ -127,11 +126,17 @@ class _BookingsAssignedScreenState extends State<BookingsAssignedScreen> {
 
       final response = uniqueRides.values.toList();
 
-      // Ordenar por fecha de creación (más recientes primero)
+      // Ordenar por fecha del viaje (scheduled_at si existe, sino created_at), más cercanos primero
       response.sort((a, b) {
-        final dateA = a['created_at'] != null ? DateTime.parse(a['created_at']) : DateTime(1970);
-        final dateB = b['created_at'] != null ? DateTime.parse(b['created_at']) : DateTime(1970);
-        return dateB.compareTo(dateA);
+        // Usar scheduled_at si existe, sino created_at
+        final dateA = a['scheduled_at'] != null
+            ? DateTime.parse(a['scheduled_at'])
+            : (a['created_at'] != null ? DateTime.parse(a['created_at']) : DateTime(1970));
+        final dateB = b['scheduled_at'] != null
+            ? DateTime.parse(b['scheduled_at'])
+            : (b['created_at'] != null ? DateTime.parse(b['created_at']) : DateTime(1970));
+        // Ordenar ascendente (más cercanos primero)
+        return dateA.compareTo(dateB);
       });
 
       if (kDebugMode) {
@@ -387,89 +392,29 @@ class _BookingsAssignedScreenState extends State<BookingsAssignedScreen> {
   }
 
   Widget _buildBookingsTable() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildTableHeader(),
-          Container(constraints: const BoxConstraints(minHeight: 200), child: _buildTableContent()),
-        ],
-      ),
-    );
+    return _buildBookingsList();
   }
 
-  Widget _buildTableHeader() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth > 900;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1D4ED8),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(8),
-          topRight: Radius.circular(8),
-        ),
-      ),
-      child: isTablet
-          ? Row(
-              children: [
-                _buildHeaderCell('Order No.', flex: 1),
-                _buildHeaderCell('Passenger', flex: 1),
-                _buildHeaderCell('Date & Time', flex: 1),
-                _buildHeaderCell('Pick Up', flex: 2),
-                _buildHeaderCell('Drop Off', flex: 2),
-                _buildHeaderCell('Vehicle', flex: 1),
-                _buildHeaderCell('Payment', flex: 1),
-                _buildHeaderCell('Fare', flex: 1),
-                _buildHeaderCell('Driver', flex: 1),
-                _buildHeaderCell('Acciones', flex: 1),
-              ],
-            )
-          : const Text(
-              'Bookings',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-    );
-  }
-
-  Widget _buildHeaderCell(String text, {int flex = 1}) {
-    return Expanded(
-      flex: flex,
-      child: Text(
-        text,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-      ),
-    );
-  }
-
-  Widget _buildTableContent() {
+  Widget _buildBookingsList() {
     if (_isLoading) {
-      return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator()));
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_errorMessage != null) {
-      return SizedBox(
-        height: 200,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 48),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                style: const TextStyle(color: Colors.red),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(onPressed: _loadAssignedRides, child: const Text('Reintentar')),
-            ],
-          ),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: _loadAssignedRides, child: const Text('Reintentar')),
+          ],
         ),
       );
     }
@@ -489,254 +434,273 @@ class _BookingsAssignedScreenState extends State<BookingsAssignedScreen> {
           userEmail.contains(_searchTerm);
     }).toList();
 
-    if (filteredRides.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(32.0),
-        child: const Center(
-          child: Text('No Records', style: TextStyle(color: Colors.grey, fontSize: 16)),
-        ),
+    // Aplicar límite de registros por página
+    final displayedRides = filteredRides.take(_recordsPerPage).toList();
+
+    if (displayedRides.isEmpty) {
+      return const Center(
+        child: Text('No Records', style: TextStyle(color: Colors.grey, fontSize: 16)),
       );
     }
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth > 900;
-
-    if (isTablet) {
-      return ListView.builder(
-        shrinkWrap: true,
-        itemCount: filteredRides.length,
-        itemBuilder: (context, index) {
-          final ride = filteredRides[index];
-          return _buildTableRow(ride, isTablet);
-        },
-      );
-    } else {
-      return ListView.builder(
-        shrinkWrap: true,
-        itemCount: filteredRides.length,
-        itemBuilder: (context, index) {
-          final ride = filteredRides[index];
-          return _buildMobileCard(ride);
-        },
-      );
-    }
+    return ListView.builder(
+      itemCount: displayedRides.length,
+      itemBuilder: (context, index) {
+        final ride = displayedRides[index];
+        return _buildBookingCard(ride);
+      },
+    );
   }
 
-  Widget _buildTableRow(Map<String, dynamic> ride, bool isTablet) {
-    final origin = (ride['origin'] as Map?)?['address'] ?? 'N/A';
-    final destination = (ride['destination'] as Map?)?['address'] ?? 'N/A';
-    final clientName = ride['client_name'] ?? 'N/A';
-    final price = ride['price'] ?? 0.0;
+  Widget _buildBookingCard(Map<String, dynamic> ride) {
+    final user = ride['user'] as Map<String, dynamic>?;
+    final userName = user?['display_name'] ?? user?['email'] ?? 'Sin nombre';
+    final clientName = ride['client_name']?.toString() ?? userName.toString();
     final createdAt = ride['created_at'] != null
         ? DateTime.parse(ride['created_at'])
         : DateTime.now();
-    final driverId = ride['driver_id']?.toString() ?? 'N/A';
+    // Fecha del viaje (scheduled_at si existe, sino created_at)
+    final rideDate = ride['scheduled_at'] != null
+        ? DateTime.parse(ride['scheduled_at'])
+        : createdAt;
+    final formattedRideDate = DateFormat('MM/dd/yyyy HH:mm').format(rideDate);
+    final origin = (ride['origin'] as Map?)?['address']?.toString() ?? 'N/A';
+    final destination = (ride['destination'] as Map?)?['address']?.toString() ?? 'N/A';
+    final price = ride['price'] ?? 0.0;
+    final phoneNumber = ride['phone_number']?.toString() ?? '';
+    final flightNumber = ride['flight_number']?.toString() ?? '';
+
+    // Obtener nombre del driver
+    String driverName = 'Sin asignar';
+    final driver = ride['driver'] as Map<String, dynamic>?;
+    if (driver != null) {
+      final driverUser = driver['user'] as Map<String, dynamic>?;
+      if (driverUser != null) {
+        driverName =
+            driverUser['display_name']?.toString() ??
+            driverUser['email']?.toString() ??
+            'Sin nombre';
+      }
+    }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade200, width: 1),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 1,
-            child: Text(
-              ride['id']?.toString().substring(0, 8) ?? 'N/A',
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              clientName.toString(),
-              style: const TextStyle(fontSize: 12),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              DateFormat('MM/dd HH:mm').format(createdAt),
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              origin.toString(),
-              style: const TextStyle(fontSize: 12),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              destination.toString(),
-              style: const TextStyle(fontSize: 12),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Expanded(flex: 1, child: Text('N/A', style: const TextStyle(fontSize: 12))),
-          Expanded(flex: 1, child: Text('Cash', style: const TextStyle(fontSize: 12))),
-          Expanded(
-            flex: 1,
-            child: Text(
-              '\$${price.toStringAsFixed(2)}',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text(
-              driverId != 'N/A' ? driverId.substring(0, 8) : 'N/A',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.blue.shade700,
-                fontWeight: FontWeight.bold,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Expanded(
-            flex: 1,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {},
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.edit, size: 18),
-                  color: Colors.blue,
-                  tooltip: 'Cambiar conductor',
-                  onPressed: () => _showChangeDriverDialog(ride),
+                // Avatar con gradiente profesional
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1D4ED8), Color(0xFF3B82F6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1D4ED8).withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.person, color: Colors.white, size: 32),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.undo, size: 18),
-                  color: Colors.orange,
-                  tooltip: 'Regresar a pendientes',
-                  onPressed: () => _returnToPending(ride),
+                const SizedBox(width: 20),
+                // Información principal
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              clientName,
+                              style: GoogleFonts.exo(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1A202C),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                          if (price > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1D4ED8).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '\$${price.toStringAsFixed(2)}',
+                                style: GoogleFonts.exo(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF1D4ED8),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today, size: 16, color: Colors.grey.shade600),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Fecha del viaje: $formattedRideDate',
+                            style: GoogleFonts.exo(fontSize: 14, color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                      if (phoneNumber.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(Icons.phone, size: 16, color: Colors.grey.shade600),
+                            const SizedBox(width: 6),
+                            Text(
+                              phoneNumber,
+                              style: GoogleFonts.exo(fontSize: 14, color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (flightNumber.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(Icons.flight, size: 16, color: Colors.grey.shade600),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Vuelo: $flightNumber',
+                              style: GoogleFonts.exo(fontSize: 14, color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on, size: 16, color: Colors.green.shade600),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              origin,
+                              style: GoogleFonts.exo(fontSize: 13, color: Colors.grey.shade700),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on, size: 16, color: Colors.red.shade600),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              destination,
+                              style: GoogleFonts.exo(fontSize: 13, color: Colors.grey.shade700),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Badge de driver asignado con botones de acción
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle, size: 18, color: Colors.green.shade700),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Asignado',
+                                style: GoogleFonts.exo(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            driverName,
+                            style: GoogleFonts.exo(fontSize: 12, color: Colors.green.shade700),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 20),
+                          color: Colors.blue,
+                          tooltip: 'Cambiar conductor',
+                          onPressed: () => _showChangeDriverDialog(ride),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.undo, size: 20),
+                          color: Colors.orange,
+                          tooltip: 'Regresar a pendientes',
+                          onPressed: () => _returnToPending(ride),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileCard(Map<String, dynamic> ride) {
-    final origin = (ride['origin'] as Map?)?['address'] ?? 'N/A';
-    final destination = (ride['destination'] as Map?)?['address'] ?? 'N/A';
-    final clientName = ride['client_name'] ?? 'N/A';
-    final price = ride['price'] ?? 0.0;
-    final createdAt = ride['created_at'] != null
-        ? DateTime.parse(ride['created_at'])
-        : DateTime.now();
-    final driverId = ride['driver_id']?.toString() ?? 'N/A';
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Order: ${ride['id']?.toString().substring(0, 8) ?? 'N/A'}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              Text(
-                '\$${price.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Color(0xFF1D4ED8),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text('Passenger: $clientName', style: const TextStyle(fontSize: 12)),
-          const SizedBox(height: 4),
-          Text(
-            'Driver: ${driverId != 'N/A' ? driverId.substring(0, 8) : 'N/A'}',
-            style: const TextStyle(fontSize: 12, color: Colors.blue),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Date: ${DateFormat('MM/dd/yyyy HH:mm').format(createdAt)}',
-            style: const TextStyle(fontSize: 12),
-          ),
-          const SizedBox(height: 8),
-          const Divider(),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(Icons.location_on, size: 16, color: Colors.green),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  origin.toString(),
-                  style: const TextStyle(fontSize: 12),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(Icons.location_on, size: 16, color: Colors.red),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  destination.toString(),
-                  style: const TextStyle(fontSize: 12),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade100,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  ride['status']?.toString().toUpperCase() ?? 'ASSIGNED',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.edit, size: 18),
-                color: Colors.blue,
-                tooltip: 'Cambiar conductor',
-                onPressed: () => _showChangeDriverDialog(ride),
-              ),
-              IconButton(
-                icon: const Icon(Icons.undo, size: 18),
-                color: Colors.orange,
-                tooltip: 'Regresar a pendientes',
-                onPressed: () => _returnToPending(ride),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

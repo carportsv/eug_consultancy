@@ -113,76 +113,81 @@ class _VehicleCarouselState extends State<VehicleCarousel> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(_kBorderRadius * 4),
-        child: Column(
-          children: [
-            // Carousel con flechas de navegación
-            Expanded(
-              child: Stack(
-                children: [
-                  PageView.builder(
-                    controller: _carouselController,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentCarIndex = index;
-                      });
-                      // Reiniciar el timer cuando el usuario cambia manualmente
-                      _startCarouselTimer();
-                    },
-                    itemCount: widget.vehicles.length,
-                    itemBuilder: (context, index) {
-                      final vehicle = widget.vehicles[index];
-                      return VehicleCarouselItem(vehicle: vehicle);
-                    },
-                  ),
-                  // Flecha izquierda
-                  Positioned(
-                    left: 8,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: CarouselNavigationArrow(
-                        icon: Icons.chevron_left,
-                        onPressed: _previousPage,
-                        isLeft: true,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Carousel con flechas de navegación
+                Expanded(
+                  child: Stack(
+                    children: [
+                      PageView.builder(
+                        controller: _carouselController,
+                        onPageChanged: (index) {
+                          setState(() {
+                            _currentCarIndex = index;
+                          });
+                          // Reiniciar el timer cuando el usuario cambia manualmente
+                          _startCarouselTimer();
+                        },
+                        itemCount: widget.vehicles.length,
+                        itemBuilder: (context, index) {
+                          final vehicle = widget.vehicles[index];
+                          return VehicleCarouselItem(vehicle: vehicle);
+                        },
                       ),
-                    ),
-                  ),
-                  // Flecha derecha
-                  Positioned(
-                    right: 8,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: CarouselNavigationArrow(
-                        icon: Icons.chevron_right,
-                        onPressed: _nextPage,
-                        isLeft: false,
+                      // Flecha izquierda
+                      Positioned(
+                        left: 8,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                          child: CarouselNavigationArrow(
+                            icon: Icons.chevron_left,
+                            onPressed: _previousPage,
+                            isLeft: true,
+                          ),
+                        ),
                       ),
-                    ),
+                      // Flecha derecha
+                      Positioned(
+                        right: 8,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                          child: CarouselNavigationArrow(
+                            icon: Icons.chevron_right,
+                            onPressed: _nextPage,
+                            isLeft: false,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            // Indicators
-            Container(
-              padding: const EdgeInsets.all(_kSpacing),
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(_kBorderRadius * 4),
-                  bottomRight: Radius.circular(_kBorderRadius * 4),
+                // Indicators
+                Container(
+                  padding: const EdgeInsets.all(_kSpacing),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(_kBorderRadius * 4),
+                      bottomRight: Radius.circular(_kBorderRadius * 4),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      widget.vehicles.length,
+                      (index) => CarouselIndicator(isActive: index == _currentCarIndex),
+                    ),
+                  ),
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  widget.vehicles.length,
-                  (index) => CarouselIndicator(isActive: index == _currentCarIndex),
-                ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );

@@ -8,9 +8,10 @@ bool _isPromise(JSAny? obj) {
   if (obj == null) return false;
   try {
     final dynamicObj = obj as dynamic;
-    // Verificar que tenga los métodos then y catch sin hacer type check
-    // para evitar el warning de invalid_runtime_check_with_js_interop_types
-    return dynamicObj.then != null && dynamicObj['catch'] != null;
+    // Verificar que tenga el método then (las Promises de JavaScript siempre tienen then)
+    // No podemos verificar el tipo en tiempo de ejecución de manera segura en Dart,
+    // así que solo verificamos que exista el método
+    return dynamicObj.then != null;
   } catch (e) {
     return false;
   }
@@ -45,7 +46,29 @@ void _callPromiseThen(JSObject promise, JSFunction onResolve, JSFunction onRejec
 extension JSPromiseExtension<T extends JSAny?> on JSPromise<T> {
   Future<T> get toDart {
     final completer = Completer<T>();
-    final promise = this as JSObject;
+
+    // Convertir a JSObject
+    JSObject promise;
+    try {
+      promise = this as JSObject;
+    } catch (e) {
+      // Si no se puede convertir a JSObject, intentar como dynamic
+      try {
+        final dynamicObj = this as dynamic;
+        // Si es una Promise nativa de JavaScript, usar directamente
+        if (_isPromise(dynamicObj)) {
+          promise = dynamicObj as JSObject;
+        } else {
+          completer.completeError(
+            Exception('El objeto retornado no es una Promise válida. Tipo: $runtimeType'),
+          );
+          return completer.future;
+        }
+      } catch (e2) {
+        completer.completeError(Exception('Error al convertir a JSObject: $e, $e2'));
+        return completer.future;
+      }
+    }
 
     // Verificar que sea una promesa válida
     if (!_isPromise(promise)) {

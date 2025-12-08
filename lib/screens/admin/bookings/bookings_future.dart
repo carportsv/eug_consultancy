@@ -444,6 +444,8 @@ class _BookingsFutureScreenState extends State<BookingsFutureScreen> {
         ? DateTime.parse(ride['scheduled_date'])
         : (ride['created_at'] != null ? DateTime.parse(ride['created_at']) : DateTime.now());
     final scheduledTime = ride['scheduled_time']?.toString() ?? '';
+    final phoneNumber = ride['phone_number']?.toString() ?? '';
+    final flightNumber = ride['flight_number']?.toString() ?? '';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -461,10 +463,28 @@ class _BookingsFutureScreenState extends State<BookingsFutureScreen> {
           ),
           Expanded(
             flex: 1,
-            child: Text(
-              clientName.toString(),
-              style: const TextStyle(fontSize: 12),
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  clientName.toString(),
+                  style: const TextStyle(fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (phoneNumber.isNotEmpty)
+                  Text(
+                    phoneNumber,
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                if (flightNumber.isNotEmpty)
+                  Text(
+                    'Vuelo: $flightNumber',
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
             ),
           ),
           Expanded(
@@ -524,6 +544,8 @@ class _BookingsFutureScreenState extends State<BookingsFutureScreen> {
         ? DateTime.parse(ride['scheduled_date'])
         : (ride['created_at'] != null ? DateTime.parse(ride['created_at']) : DateTime.now());
     final scheduledTime = ride['scheduled_time']?.toString() ?? '';
+    final phoneNumber = ride['phone_number']?.toString() ?? '';
+    final flightNumber = ride['flight_number']?.toString() ?? '';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -554,6 +576,14 @@ class _BookingsFutureScreenState extends State<BookingsFutureScreen> {
           ),
           const SizedBox(height: 8),
           Text('Passenger: $clientName', style: const TextStyle(fontSize: 12)),
+          if (phoneNumber.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('Phone: $phoneNumber', style: const TextStyle(fontSize: 12)),
+          ],
+          if (flightNumber.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('Flight: $flightNumber', style: const TextStyle(fontSize: 12)),
+          ],
           const SizedBox(height: 4),
           Text(
             'Scheduled: ${DateFormat('MM/dd/yyyy').format(scheduledDate)} ${scheduledTime.isNotEmpty ? scheduledTime : ''}',

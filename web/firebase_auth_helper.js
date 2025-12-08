@@ -9,7 +9,28 @@ window.firebaseAuthSignInWithGoogle = async function(firebaseConfig) {
       if (!firebaseConfig) {
         throw new Error('Firebase config es requerido para inicializar');
       }
+      // Log completo de la configuración (solo primeros y últimos caracteres de API key por seguridad)
+      const apiKeyPreview = firebaseConfig.apiKey ? 
+        firebaseConfig.apiKey.substring(0, 10) + '...' + firebaseConfig.apiKey.substring(firebaseConfig.apiKey.length - 5) : 
+        'missing';
+      console.log('[firebaseAuthSignInWithGoogle] Inicializando Firebase con config:', {
+        apiKey: apiKeyPreview,
+        apiKeyLength: firebaseConfig.apiKey ? firebaseConfig.apiKey.length : 0,
+        authDomain: firebaseConfig.authDomain,
+        projectId: firebaseConfig.projectId,
+        messagingSenderId: firebaseConfig.messagingSenderId,
+        appId: firebaseConfig.appId
+      });
+      
+      // Verificar que la API key tenga el formato correcto
+      if (!firebaseConfig.apiKey || firebaseConfig.apiKey.length < 30) {
+        throw new Error('API key inválida o faltante en la configuración de Firebase');
+      }
+      
       firebase.initializeApp(firebaseConfig);
+      console.log('[firebaseAuthSignInWithGoogle] ✅ Firebase inicializado');
+    } else {
+      console.log('[firebaseAuthSignInWithGoogle] ✅ Firebase ya estaba inicializado');
     }
     
     // Obtener la instancia de Firebase Auth
@@ -17,6 +38,28 @@ window.firebaseAuthSignInWithGoogle = async function(firebaseConfig) {
     
     if (!auth) {
       throw new Error('Firebase Auth no está disponible');
+    }
+    
+    // Verificar que la configuración sea correcta
+    const currentApp = firebase.app();
+    if (currentApp && currentApp.options) {
+      const currentApiKey = currentApp.options.apiKey || 'missing';
+      const apiKeyPreview = currentApiKey.length > 15 ? 
+        currentApiKey.substring(0, 10) + '...' + currentApiKey.substring(currentApiKey.length - 5) : 
+        currentApiKey;
+      console.log('[firebaseAuthSignInWithGoogle] Firebase config verificada:', {
+        projectId: currentApp.options.projectId,
+        authDomain: currentApp.options.authDomain,
+        apiKey: apiKeyPreview,
+        apiKeyLength: currentApiKey.length
+      });
+      
+      // Verificar que la API key coincida con la que se pasó
+      if (firebaseConfig.apiKey && currentApp.options.apiKey !== firebaseConfig.apiKey) {
+        console.warn('[firebaseAuthSignInWithGoogle] ⚠️ ADVERTENCIA: La API key de Firebase no coincide con la pasada en config');
+        console.warn('[firebaseAuthSignInWithGoogle] API key pasada:', firebaseConfig.apiKey.substring(0, 10) + '...');
+        console.warn('[firebaseAuthSignInWithGoogle] API key actual:', currentApp.options.apiKey.substring(0, 10) + '...');
+      }
     }
 
     // Crear el proveedor de Google
@@ -27,14 +70,44 @@ window.firebaseAuthSignInWithGoogle = async function(firebaseConfig) {
     // Usar signInWithPopup (más confiable que signInWithRedirect)
     let result;
     try {
+      console.log('[firebaseAuthSignInWithGoogle] Intentando signInWithPopup...');
+      console.log('[firebaseAuthSignInWithGoogle] Origen actual:', window.location.origin);
       result = await auth.signInWithPopup(provider);
+      console.log('[firebaseAuthSignInWithGoogle] ✅ signInWithPopup exitoso');
     } catch (popupError) {
+      console.error('[firebaseAuthSignInWithGoogle] Error en signInWithPopup:', popupError);
+      console.error('[firebaseAuthSignInWithGoogle] Error code:', popupError.code);
+      console.error('[firebaseAuthSignInWithGoogle] Error message:', popupError.message);
+      
       // Si el popup está bloqueado, lanzar error específico
       if (popupError.code === 'auth/popup-blocked' || 
           popupError.code === 'auth/popup-closed-by-user' ||
           (popupError.message && popupError.message.includes('POPUP_BLOCKED'))) {
         throw new Error('POPUP_BLOCKED: El popup fue bloqueado. Por favor, permite popups para este sitio.');
       }
+      
+      // Si el error es de API key, proporcionar mensaje más útil
+      if (popupError.code === 'auth/api-key-not-valid' || 
+          popupError.code === 'auth/invalid-api-key' ||
+          popupError.message && (
+            popupError.message.includes('API key') || 
+            popupError.message.includes('api-key') ||
+            popupError.message.includes('INVALID_ARGUMENT') ||
+            popupError.message.includes('400')
+          )) {
+        // Verificar el origen actual
+        const currentOrigin = window.location.origin;
+        throw new Error(
+          'API_KEY_ERROR: La API key de Firebase no es válida o tiene restricciones que bloquean este origen.\n\n' +
+          'Origen actual: ' + currentOrigin + '\n\n' +
+          'Por favor, verifica en Google Cloud Console:\n' +
+          '1. Que la API key "Browser key" tenga "Identity Toolkit API" habilitada\n' +
+          '2. Que las restricciones de aplicación permitan ' + currentOrigin + '\n' +
+          '3. En Firebase Console, verifica que "localhost" esté en "Authorized domains"\n' +
+          '4. Espera 2-5 minutos después de cambiar las restricciones para que se propaguen'
+        );
+      }
+      
       throw popupError;
     }
     
@@ -43,28 +116,38 @@ window.firebaseAuthSignInWithGoogle = async function(firebaseConfig) {
       throw new Error('No se pudo obtener el resultado de la autenticación');
     }
     
-    // Verificar que result.credential existe
-    if (!result.credential) {
-      // Si no hay credential pero hay user, puede ser que ya esté autenticado
-      // En este caso, intentar obtener el token del usuario actual
-      if (result.user) {
-        const idToken = await result.user.getIdToken();
-        const accessToken = result.user.accessToken || null;
-        
-        return {
-          user: {
-            uid: result.user.uid,
-            email: result.user.email,
-            displayName: result.user.displayName,
-            photoURL: result.user.photoURL,
-          },
-          credential: {
-            idToken: idToken,
-            accessToken: accessToken,
-          }
-        };
+    // Verificar que tenemos un usuario
+    if (!result.user) {
+      throw new Error('No se pudo obtener el usuario de la autenticación');
+    }
+    
+    // Obtener los tokens - intentar desde credential primero, luego desde user
+    let idToken = null;
+    let accessToken = null;
+    
+    if (result.credential) {
+      // Si hay credential, usar esos tokens (método preferido)
+      idToken = result.credential.idToken;
+      accessToken = result.credential.accessToken;
+    }
+    
+    // Si no hay credential o falta algún token, obtener del usuario
+    if (!idToken) {
+      try {
+        idToken = await result.user.getIdToken();
+        console.log('[firebaseAuthSignInWithGoogle] ✅ idToken obtenido del usuario');
+      } catch (tokenError) {
+        console.error('[firebaseAuthSignInWithGoogle] Error obteniendo idToken:', tokenError);
+        throw new Error('No se pudo obtener el idToken del usuario: ' + tokenError.message);
       }
-      throw new Error('No se pudo obtener el resultado de la autenticación');
+    }
+    
+    // accessToken puede no estar disponible en algunos casos, pero intentar obtenerlo
+    if (!accessToken) {
+      // En Firebase Auth, el accessToken no está disponible directamente del usuario
+      // Solo está disponible en result.credential después de signInWithPopup
+      // Si no está disponible, usar null (Firebase puede funcionar solo con idToken)
+      console.log('[firebaseAuthSignInWithGoogle] ⚠️ accessToken no disponible, continuando solo con idToken');
     }
     
     // Retornar el resultado con los tokens
@@ -76,8 +159,8 @@ window.firebaseAuthSignInWithGoogle = async function(firebaseConfig) {
         photoURL: result.user.photoURL,
       },
       credential: {
-        idToken: result.credential.idToken,
-        accessToken: result.credential.accessToken,
+        idToken: idToken,
+        accessToken: accessToken || '', // Usar string vacío si no está disponible
       }
     };
   } catch (error) {

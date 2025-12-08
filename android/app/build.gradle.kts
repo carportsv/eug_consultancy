@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.carportsv.fzkt_openstreet"
+    namespace = "com.consultancy.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,8 +21,8 @@ android {
     }
 
     defaultConfig {
-        // CORREGIDO: Se cambia al ID de aplicación que Firebase espera.
-        applicationId = "com.carposv.taxizkt"
+        // Package name actualizado para consultancy
+        applicationId = "com.consultancy.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

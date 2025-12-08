@@ -138,7 +138,8 @@ class AddressAutocompleteService {
               'Accept': 'application/json',
               // User-Agent más específico según política de Nominatim
               // Debe incluir información de contacto para aplicaciones
-              'User-Agent': 'FZKT_TaxiApp/1.0 (com.carposv.taxizkt; contacto: support@carposv.com)',
+              'User-Agent':
+                  'Consultancy_TaxiApp/1.0 (com.consultancy.app; contacto: support@consultancy.com)',
               'Referer': 'https://nominatim.openstreetmap.org/',
             },
           )
@@ -289,7 +290,7 @@ class AddressAutocompleteService {
             uri,
             headers: {
               'Accept': 'application/json',
-              'User-Agent': 'FZKT_TaxiApp/1.0 (com.carposv.taxizkt)',
+              'User-Agent': 'Consultancy_TaxiApp/1.0 (com.consultancy.app)',
             },
           )
           .timeout(
@@ -404,7 +405,7 @@ class AddressAutocompleteService {
             uri,
             headers: {
               'Accept': 'application/json',
-              'User-Agent': 'FZKT_TaxiApp/1.0 (com.carposv.taxizkt)',
+              'User-Agent': 'Consultancy_TaxiApp/1.0 (com.consultancy.app)',
             },
           )
           .timeout(

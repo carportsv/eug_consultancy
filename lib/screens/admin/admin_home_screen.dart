@@ -6,7 +6,7 @@ import 'user_management_screen.dart';
 import 'bookings/bookings_new_ride.dart';
 import 'bookings/bookings_new_screen.dart';
 import 'bookings/bookings_pending.dart';
-import 'bookings/bookings_future.dart';
+// import 'bookings/bookings_future.dart'; // Temporalmente deshabilitado
 import 'bookings/bookings_assigned.dart';
 import 'bookings/bookings_accepted.dart';
 import 'bookings/bookings_completed.dart';
@@ -51,7 +51,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   // Contadores de bookings
   int _bookingsNewCount = 0;
   int _bookingsPendingCount = 0;
-  int _bookingsFutureCount = 0;
+  // int _bookingsFutureCount = 0; // Temporalmente deshabilitado
   int _bookingsAssignedCount = 0;
   int _bookingsAcceptedCount = 0;
   int _bookingsCompletedCount = 0;
@@ -129,10 +129,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           .eq('status', 'requested')
           .isFilter('driver_id', null);
 
-      final futureData = await supabaseClient
-          .from('ride_requests')
-          .select('id')
-          .eq('is_scheduled', true);
+      // final futureData = await supabaseClient
+      //     .from('ride_requests')
+      //     .select('id')
+      //     .eq('is_scheduled', true); // Temporalmente deshabilitado
 
       // Contar bookings asignados: 'requested' con driver_id (esperando aceptación) + 'accepted' (ya aceptados)
       // Hacer dos consultas separadas y sumar los resultados
@@ -185,7 +185,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         setState(() {
           _bookingsNewCount = (newData as List).length;
           _bookingsPendingCount = (pendingData as List).length;
-          _bookingsFutureCount = (futureData as List).length;
+          // _bookingsFutureCount = (futureData as List).length; // Temporalmente deshabilitado
           _bookingsAssignedCount = assignedData.length;
           _bookingsAcceptedCount = acceptedCount;
           _bookingsCompletedCount = (completedData as List).length;
@@ -256,7 +256,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         content = const UserManagementScreen();
         break;
       case 'new_booking':
-        content = const NewBookingScreen();
+        content = NewBookingScreen(
+          onRideCreated: () {
+            // Cambiar el contenido de vuelta a home después de crear un viaje
+            _onSelectItem('home');
+          },
+        );
         break;
       case 'bookings_new':
         content = const BookingsNewScreen();
@@ -264,9 +269,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       case 'bookings_pending':
         content = const BookingsPendingScreen();
         break;
-      case 'bookings_future':
-        content = const BookingsFutureScreen();
-        break;
+      // case 'bookings_future':
+      //   content = const BookingsFutureScreen();
+      //   break; // Temporalmente deshabilitado
       case 'bookings_assigned':
         content = const BookingsAssignedScreen();
         break;
@@ -386,7 +391,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             bookingCounts: {
               'new': _bookingsNewCount,
               'pending': _bookingsPendingCount,
-              'future': _bookingsFutureCount,
+              // 'future': _bookingsFutureCount, // Temporalmente deshabilitado
               'assigned': _bookingsAssignedCount,
               'accepted': _bookingsAcceptedCount,
               'completed': _bookingsCompletedCount,
@@ -412,8 +417,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         return 'Bookings - New';
       case 'bookings_pending':
         return 'Bookings - Pending';
-      case 'bookings_future':
-        return 'Bookings - Future';
+      // case 'bookings_future':
+      //   return 'Bookings - Future'; // Temporalmente deshabilitado
       case 'bookings_assigned':
         return 'Bookings - Assigned';
       case 'bookings_accepted':
@@ -583,11 +588,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     count: _bookingsPendingCount,
                     onTap: () => _onSelectItem('bookings_pending'),
                   ),
-                  _buildBookingStatusMenuItem(
-                    text: 'Future',
-                    count: _bookingsFutureCount,
-                    onTap: () => _onSelectItem('bookings_future'),
-                  ),
+                  // _buildBookingStatusMenuItem(
+                  //   text: 'Future',
+                  //   count: _bookingsFutureCount,
+                  //   onTap: () => _onSelectItem('bookings_future'),
+                  // ), // Temporalmente deshabilitado
                   _buildBookingStatusMenuItem(
                     text: 'Assigned',
                     count: _bookingsAssignedCount,
@@ -769,6 +774,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     required int count,
     required VoidCallback onTap,
   }) {
+    // No mostrar contador para "New" ya que es una acción, no una lista
+    final shouldShowCount = text.toLowerCase() != 'new';
+
     return ListTile(
       dense: true,
       title: Padding(
@@ -778,8 +786,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             const Icon(Icons.circle, size: 8, color: Colors.white38),
             const SizedBox(width: 16),
             Text(text, style: const TextStyle(color: Colors.white60)),
-            const Spacer(),
-            Text('($count)', style: const TextStyle(color: Colors.white60)),
+            if (shouldShowCount) ...[
+              const Spacer(),
+              Text('$count', style: const TextStyle(color: Colors.white60)),
+            ],
           ],
         ),
       ),
@@ -967,24 +977,24 @@ class _AdminScreenWrapper extends StatelessWidget {
                     },
                     context: context,
                   ),
-                  _buildBookingStatusMenuItem(
-                    text: 'Future',
-                    count: bookingCounts['future'] ?? 0,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => _AdminScreenWrapper(
-                            title: 'Bookings - Future',
-                            content: const BookingsFutureScreen(),
-                            onSelectItem: (key) {},
-                            onLogout: onLogout,
-                            bookingCounts: bookingCounts,
-                          ),
-                        ),
-                      );
-                    },
-                    context: context,
-                  ),
+                  // _buildBookingStatusMenuItem(
+                  //   text: 'Future',
+                  //   count: bookingCounts['future'] ?? 0,
+                  //   onTap: () {
+                  //     Navigator.of(context).push(
+                  //       MaterialPageRoute(
+                  //         builder: (context) => _AdminScreenWrapper(
+                  //           title: 'Bookings - Future',
+                  //           content: const BookingsFutureScreen(),
+                  //           onSelectItem: (key) {},
+                  //           onLogout: onLogout,
+                  //           bookingCounts: bookingCounts,
+                  //         ),
+                  //       ),
+                  //     );
+                  //   },
+                  //   context: context,
+                  // ), // Temporalmente deshabilitado
                   _buildBookingStatusMenuItem(
                     text: 'Assigned',
                     count: bookingCounts['assigned'] ?? 0,
@@ -1504,6 +1514,9 @@ class _AdminScreenWrapper extends StatelessWidget {
     required VoidCallback onTap,
     required BuildContext context,
   }) {
+    // No mostrar contador para "New" ya que es una acción, no una lista
+    final shouldShowCount = text.toLowerCase() != 'new';
+
     return ListTile(
       dense: true,
       title: Padding(
@@ -1513,8 +1526,10 @@ class _AdminScreenWrapper extends StatelessWidget {
             const Icon(Icons.circle, size: 8, color: Colors.white38),
             const SizedBox(width: 16),
             Text(text, style: const TextStyle(color: Colors.white60)),
-            const Spacer(),
-            Text('($count)', style: const TextStyle(color: Colors.white60)),
+            if (shouldShowCount) ...[
+              const Spacer(),
+              Text('$count', style: const TextStyle(color: Colors.white60)),
+            ],
           ],
         ),
       ),

@@ -107,12 +107,26 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
             .lt('created_at', endOfDay.toIso8601String());
       }
 
-      // Ordenar por fecha de creación
-      final response = await queryBuilder.order('created_at', ascending: false);
+      // Obtener todos los bookings sin ordenar primero
+      final response = await queryBuilder;
+
+      // Ordenar por fecha del viaje (scheduled_at si existe, sino created_at), más cercanos primero
+      final sortedRides = (response as List).cast<Map<String, dynamic>>();
+      sortedRides.sort((a, b) {
+        // Usar scheduled_at si existe, sino created_at
+        final dateA = a['scheduled_at'] != null 
+            ? DateTime.parse(a['scheduled_at'])
+            : (a['created_at'] != null ? DateTime.parse(a['created_at']) : DateTime(1970));
+        final dateB = b['scheduled_at'] != null 
+            ? DateTime.parse(b['scheduled_at'])
+            : (b['created_at'] != null ? DateTime.parse(b['created_at']) : DateTime(1970));
+        // Ordenar ascendente (más cercanos primero)
+        return dateA.compareTo(dateB);
+      });
 
       if (mounted) {
         setState(() {
-          _rides = List<Map<String, dynamic>>.from(response);
+          _rides = sortedRides;
           _isLoading = false;
         });
       }
@@ -470,13 +484,20 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
   Widget _buildBookingCard(Map<String, dynamic> ride) {
     final user = ride['user'] as Map<String, dynamic>?;
     final userName = user?['display_name'] ?? user?['email'] ?? 'Sin nombre';
+    final clientName = ride['client_name']?.toString() ?? userName.toString();
     final createdAt = ride['created_at'] != null
         ? DateTime.parse(ride['created_at'])
         : DateTime.now();
-    final formattedDate = DateFormat('MM/dd/yyyy HH:mm').format(createdAt);
+    // Fecha del viaje (scheduled_at si existe, sino created_at)
+    final rideDate = ride['scheduled_at'] != null
+        ? DateTime.parse(ride['scheduled_at'])
+        : createdAt;
+    final formattedRideDate = DateFormat('MM/dd/yyyy HH:mm').format(rideDate);
     final origin = (ride['origin'] as Map?)?['address']?.toString() ?? 'N/A';
     final destination = (ride['destination'] as Map?)?['address']?.toString() ?? 'N/A';
     final price = ride['price'] ?? 0.0;
+    final phoneNumber = ride['phone_number']?.toString() ?? '';
+    final flightNumber = ride['flight_number']?.toString() ?? '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -533,7 +554,7 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              userName.toString(),
+                              clientName,
                               style: GoogleFonts.exo(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -566,11 +587,37 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
                           Icon(Icons.calendar_today, size: 16, color: Colors.grey.shade600),
                           const SizedBox(width: 6),
                           Text(
-                            formattedDate,
+                            'Fecha del viaje: $formattedRideDate',
                             style: GoogleFonts.exo(fontSize: 14, color: Colors.grey.shade600),
                           ),
                         ],
                       ),
+                      if (phoneNumber.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(Icons.phone, size: 16, color: Colors.grey.shade600),
+                            const SizedBox(width: 6),
+                            Text(
+                              phoneNumber,
+                              style: GoogleFonts.exo(fontSize: 14, color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (flightNumber.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(Icons.flight, size: 16, color: Colors.grey.shade600),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Vuelo: $flightNumber',
+                              style: GoogleFonts.exo(fontSize: 14, color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -670,21 +717,6 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
     );
   }
 
-  // Función helper para formatear duración
-  String _formatDuration(int seconds) {
-    if (seconds <= 0) return '0 min';
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-    if (hours > 0) {
-      return '${hours}h ${minutes}min';
-    } else if (minutes > 0) {
-      return '${minutes}min ${secs}s';
-    } else {
-      return '${secs}s';
-    }
-  }
-
   Future<void> _showBookingDetailsModal(Map<String, dynamic> ride) async {
     final user = ride['user'] as Map<String, dynamic>?;
     final origin = (ride['origin'] as Map?)?['address'] ?? '';
@@ -696,15 +728,11 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
     final distanceInMeters = (ride['distance'] ?? 0.0) as double;
     final distanceInKm = distanceInMeters / 1000.0;
 
-    // Obtener duración en segundos
-    final durationInSeconds = (ride['duration'] ?? 0) as int;
-
     // Controllers para edición
     final originController = TextEditingController(text: origin.toString());
     final destinationController = TextEditingController(text: destination.toString());
     final priceController = TextEditingController(text: (ride['price'] ?? 0.0).toStringAsFixed(2));
     final distanceController = TextEditingController(text: distanceInKm.toStringAsFixed(2));
-    final durationController = TextEditingController(text: durationInSeconds.toString());
     final statusController = TextEditingController(text: ride['status'] ?? 'requested');
 
     String? selectedDriverId = ride['driver_id']?.toString();
@@ -826,17 +854,43 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Información del usuario con card
+                            // Nombre del cliente con card
                             _buildSectionCard(
-                              title: 'Información del Usuario',
+                              title: 'Nombre del Cliente',
                               icon: Icons.person,
                               child: Column(
                                 children: [
-                                  _buildInfoRow('Nombre', user?['display_name'] ?? 'N/A'),
+                                  _buildInfoRow(
+                                    'Cliente',
+                                    ride['client_name']?.toString() ?? user?['display_name'] ?? 'N/A',
+                                  ),
                                   const Divider(height: 24),
                                   _buildInfoRow('Email', user?['email'] ?? 'N/A'),
                                   const Divider(height: 24),
-                                  _buildInfoRow('Teléfono', user?['phone_number'] ?? 'N/A'),
+                                  _buildInfoRow(
+                                    'Teléfono',
+                                    ride['phone_number']?.toString() ?? user?['phone_number'] ?? 'N/A',
+                                  ),
+                                  if (ride['flight_number']?.toString().isNotEmpty ?? false) ...[
+                                    const Divider(height: 24),
+                                    _buildInfoRow(
+                                      'Número de Vuelo',
+                                      ride['flight_number']?.toString() ?? 'N/A',
+                                    ),
+                                  ],
+                                  const Divider(height: 24),
+                                  _buildInfoRow(
+                                    'Fecha del Viaje',
+                                    ride['scheduled_at'] != null
+                                        ? DateFormat('dd/MM/yyyy HH:mm').format(
+                                            DateTime.parse(ride['scheduled_at']),
+                                          )
+                                        : ride['created_at'] != null
+                                            ? DateFormat('dd/MM/yyyy HH:mm').format(
+                                                DateTime.parse(ride['created_at']),
+                                              )
+                                            : 'N/A',
+                                  ),
                                 ],
                               ),
                             ),
@@ -998,82 +1052,6 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
                                           keyboardType: const TextInputType.numberWithOptions(
                                             decimal: true,
                                           ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            TextField(
-                                              controller: durationController,
-                                              decoration: InputDecoration(
-                                                labelText: 'Duración (segundos)',
-                                                helperText: 'Ejemplo: 1800 = 30 min',
-                                                helperStyle: GoogleFonts.exo(fontSize: 11),
-                                                border: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: BorderSide(
-                                                    color: Colors.grey.shade300,
-                                                  ),
-                                                ),
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: BorderSide(
-                                                    color: Colors.grey.shade300,
-                                                  ),
-                                                ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(
-                                                    color: Color(0xFF1D4ED8),
-                                                    width: 2,
-                                                  ),
-                                                ),
-                                                filled: true,
-                                                fillColor: Colors.purple.shade50,
-                                                prefixIcon: const Icon(
-                                                  Icons.timer,
-                                                  color: Colors.purple,
-                                                ),
-                                                contentPadding: const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 16,
-                                                ),
-                                              ),
-                                              style: GoogleFonts.exo(),
-                                              keyboardType: TextInputType.number,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                color: Colors.purple.shade50,
-                                                borderRadius: BorderRadius.circular(8),
-                                                border: Border.all(color: Colors.purple.shade200),
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.info_outline,
-                                                    size: 16,
-                                                    color: Colors.purple.shade700,
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Expanded(
-                                                    child: Text(
-                                                      'Actual: ${_formatDuration(durationInSeconds)}',
-                                                      style: GoogleFonts.exo(
-                                                        fontSize: 12,
-                                                        color: Colors.purple.shade700,
-                                                        fontWeight: FontWeight.w600,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
                                         ),
                                       ),
                                     ],
@@ -1332,8 +1310,6 @@ class _BookingsPendingScreenState extends State<BookingsPendingScreen> {
                                   },
                                   'price': double.tryParse(priceController.text) ?? ride['price'],
                                   'distance': distanceMeters,
-                                  'duration':
-                                      int.tryParse(durationController.text) ?? ride['duration'],
                                   'status': statusController.text,
                                   'driver_id': selectedDriverId,
                                   'updated_at': DateTime.now().toIso8601String(),

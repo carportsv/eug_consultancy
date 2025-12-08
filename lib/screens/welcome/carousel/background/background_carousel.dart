@@ -62,16 +62,28 @@ class _BackgroundCarouselState extends State<BackgroundCarousel> {
         if (kDebugMode) {
           debugPrint('[BackgroundCarousel] Cargando imagen de fondo $index: $imagePath');
         }
+
+        // Ajustar alignment según la imagen específica
+        Alignment imageAlignment;
+        if (imagePath.contains('bg_1.png') || imagePath.contains('bg_4.png')) {
+          // bg_1 y bg_4 necesitan un alignment diferente - más hacia arriba
+          imageAlignment = const Alignment(
+            0,
+            -0.75,
+          ); // Más hacia arriba para mostrar más contenido superior
+        } else {
+          // Las demás imágenes usan el alignment estándar
+          imageAlignment = const Alignment(0, -0.2);
+        }
+
         return Stack(
           fit: StackFit.expand,
           children: [
-            // Imagen de fondo con cover centrado
+            // Imagen de fondo - usando cover con alignment ajustado según la imagen
             Image.asset(
               imagePath,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              width: double.infinity,
-              height: double.infinity,
+              fit: BoxFit.cover, // Cover para llenar todo el espacio
+              alignment: imageAlignment, // Alignment específico por imagen
               filterQuality: FilterQuality.medium,
               errorBuilder: (context, error, stackTrace) {
                 if (kDebugMode) {

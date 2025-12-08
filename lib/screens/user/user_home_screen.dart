@@ -262,6 +262,12 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     user!.photoURL!,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
+                      // Manejar errores 429 (Too Many Requests) silenciosamente
+                      if (error is NetworkImageLoadException && error.statusCode == 429) {
+                        // Error de rate limiting - silencioso, solo mostrar fallback
+                        return Icon(Icons.person, color: _kPrimaryColor, size: 30);
+                      }
+                      // Otros errores también muestran fallback
                       return Icon(Icons.person, color: _kPrimaryColor, size: 30);
                     },
                   ),

@@ -487,7 +487,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       }
 
       // 1. Cerrar sesión de Firebase primero
-      await FirebaseAuth.instance.signOut();
+    await FirebaseAuth.instance.signOut();
       if (kDebugMode) {
         debugPrint('[DriverHomeScreen] ✅ Sesión de Firebase cerrada');
       }
@@ -587,10 +587,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
+          appBar: AppBar(
         title: Text('Inicio del Conductor', style: GoogleFonts.exo()),
-        backgroundColor: Colors.teal[700],
-        actions: [
+            backgroundColor: Colors.teal[700],
+            actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Actualizar',
@@ -600,13 +600,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar Sesión',
+              IconButton(
+                icon: const Icon(Icons.logout),
+                tooltip: 'Cerrar Sesión',
             onPressed: _handleLogout,
+              ),
+            ],
           ),
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: () async {
           if (_driverId != null) {
@@ -626,8 +626,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   color: Colors.blue[50],
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Column(
-                  children: [
+            child: Column(
+              children: [
                     Text(
                       '¡Hola, ${_driverName ?? 'Conductor'}!',
                       style: GoogleFonts.exo(
@@ -649,7 +649,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               const SizedBox(height: 24),
 
               // Menú de acciones rápidas
-              Text(
+                Text(
                 'Acciones Rápidas',
                 style: GoogleFonts.exo(
                   fontSize: 18,
@@ -721,11 +721,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 subtitle: 'Salir de la aplicación',
                 onTap: _handleLogout,
                 color: Colors.red,
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
-      ),
     );
   }
 

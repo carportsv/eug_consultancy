@@ -1404,7 +1404,7 @@ class _RequestRideScreenState extends State<RequestRideScreen> {
                     children: [
                       TileLayer(
                         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.example.fzkt_openstreet',
+                        userAgentPackageName: 'com.consultancy.app',
                       ),
                       // Mostrar la ruta primero (debajo de los marcadores)
                       if (_routePolyline != null) PolylineLayer(polylines: [_routePolyline!]),

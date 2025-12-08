@@ -60,14 +60,34 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         jsResult = await jsPromise.toDart;
       } catch (e) {
         debugPrint('[LoginScreen] Error al convertir JSPromise: ${e.toString()}');
-        // Si el error contiene "POPUP_BLOCKED", relanzar con mensaje más claro
         final errorStr = e.toString();
+
+        // Si el error contiene "POPUP_BLOCKED", relanzar con mensaje más claro
         if (errorStr.contains('POPUP_BLOCKED') || errorStr.contains('popup')) {
           throw Exception(
             'POPUP_BLOCKED: El popup fue bloqueado.\n\n'
             'Por favor, permite popups en tu navegador para este sitio y vuelve a intentar.',
           );
         }
+
+        // Si el error contiene "API key", proporcionar mensaje más útil
+        if (errorStr.contains('API key') || errorStr.contains('api-key')) {
+          throw Exception(
+            'Error de configuración de Firebase: La API key no es válida o aún no se ha propagado.\n\n'
+            'Esto puede tardar hasta 5 minutos después de configurar la API key en Google Cloud Console.\n\n'
+            'Por favor, espera unos minutos y vuelve a intentar, o verifica la configuración de la API key.',
+          );
+        }
+
+        // Si el error es sobre Promise, intentar usar el método alternativo
+        if (errorStr.contains('Promise') || errorStr.contains('LegacyJavaScriptObject')) {
+          debugPrint(
+            '[LoginScreen] ⚠️ Problema con Promise, el error será manejado por el fallback',
+          );
+          // Relanzar para que se use el fallback
+          rethrow;
+        }
+
         rethrow;
       }
 
@@ -115,19 +135,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       }
 
       // Verificar que al menos idToken esté disponible (requerido por Firebase)
-      if (idToken == null) {
-        debugPrint('[LoginScreen] ⚠️ idToken es null, pero accessToken está disponible');
+      if (idToken == null || idToken.isEmpty) {
+        debugPrint('[LoginScreen] ❌ idToken es null o vacío');
         throw Exception('No se pudo obtener el idToken de la autenticación');
       }
 
-      // accessToken puede ser opcional en algunos casos, pero intentar obtenerlo
-      if (accessToken == null) {
-        debugPrint('[LoginScreen] ⚠️ accessToken es null, pero idToken está disponible');
-        // Firebase puede funcionar solo con idToken en algunos casos
-        // Usar string vacío como fallback
+      // accessToken puede ser opcional en algunos casos
+      // Firebase puede funcionar solo con idToken si accessToken no está disponible
+      if (accessToken == null || accessToken.isEmpty) {
+        debugPrint('[LoginScreen] ⚠️ accessToken no está disponible, pero idToken está disponible');
+        debugPrint('[LoginScreen] ℹ️ Firebase puede funcionar solo con idToken');
       }
 
-      return {'idToken': idToken, 'accessToken': accessToken ?? ''};
+      return {
+        'idToken': idToken,
+        'accessToken': accessToken?.isNotEmpty == true ? accessToken! : '',
+      };
     } catch (e) {
       debugPrint('[LoginScreen] Error en _firebaseAuthSignInWithGoogleWeb: ${e.toString()}');
       rethrow;
@@ -233,16 +256,31 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             'appId': firebaseOptions.appId,
           };
 
+          // Log de la configuración (solo primeros y últimos caracteres de API key por seguridad)
+          debugPrint('[LoginScreen] Configuración de Firebase para web:');
+          debugPrint(
+            '[LoginScreen] API Key: ${firebaseOptions.apiKey.substring(0, 10)}...${firebaseOptions.apiKey.substring(firebaseOptions.apiKey.length - 5)} (longitud: ${firebaseOptions.apiKey.length})',
+          );
+          debugPrint('[LoginScreen] Project ID: ${firebaseOptions.projectId}');
+          debugPrint('[LoginScreen] Auth Domain: ${firebaseOptions.authDomain}');
+          debugPrint('[LoginScreen] Messaging Sender ID: ${firebaseOptions.messagingSenderId}');
+          debugPrint('[LoginScreen] App ID: ${firebaseOptions.appId}');
+
           // Llamar a la función JavaScript usando js_interop
           final tokens = await _firebaseAuthSignInWithGoogleWeb(firebaseConfig);
           final idToken = tokens['idToken'] as String;
-          final accessToken = tokens['accessToken'] as String;
+          final accessToken = tokens['accessToken'] as String?;
 
           debugPrint('[LoginScreen] ✅ Tokens obtenidos de Firebase Auth JS');
+          debugPrint('[LoginScreen] idToken: ${idToken.isNotEmpty ? "✅ Disponible" : "❌ Vacío"}');
+          debugPrint(
+            '[LoginScreen] accessToken: ${accessToken != null && accessToken.isNotEmpty ? "✅ Disponible" : "⚠️ No disponible (usando solo idToken)"}',
+          );
 
           // Crear credencial y autenticar con Firebase
+          // Firebase puede funcionar solo con idToken si accessToken no está disponible
           final credential = GoogleAuthProvider.credential(
-            accessToken: accessToken,
+            accessToken: accessToken?.isNotEmpty == true ? accessToken : null,
             idToken: idToken,
           );
 
