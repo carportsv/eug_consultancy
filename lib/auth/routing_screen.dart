@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 // Import other screens from their correct locations
 import 'package:fzkt_openstreet/screens/admin/admin_home_screen.dart';
 import 'package:fzkt_openstreet/screens/driver/driver_home_screen.dart';
-import 'package:fzkt_openstreet/screens/user/user_home_screen.dart';
+import 'package:fzkt_openstreet/screens/welcome/welcome/welcome_screen.dart';
 
 // Import local auth files
 import './login_screen.dart';
@@ -21,11 +21,29 @@ class RoutingScreen extends StatefulWidget {
 class _RoutingScreenState extends State<RoutingScreen> {
   // Instantiate the service directly. No Provider needed.
   final UserService _userService = UserService();
+  String? _lastProcessedUserId; // Track del último usuario procesado
+  StreamSubscription<User?>? _authSubscription; // Suscripción para cancelar en dispose
 
   @override
   void initState() {
     super.initState();
     _redirectUser();
+    // Escuchar cambios de autenticación para re-ejecutar cuando cambie el usuario
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      final currentUserId = user?.uid;
+      // Si el usuario cambió, re-ejecutar la redirección
+      if (currentUserId != _lastProcessedUserId) {
+        if (mounted) {
+          _redirectUser();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _redirectUser() async {
@@ -37,6 +55,8 @@ class _RoutingScreenState extends State<RoutingScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
+      // Actualizar el último usuario procesado a null
+      _lastProcessedUserId = null;
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -47,7 +67,8 @@ class _RoutingScreenState extends State<RoutingScreen> {
     }
 
     // Navegar inmediatamente con rol por defecto, luego actualizar si es necesario
-    Widget destination = const UserHomeScreen();
+    // Los usuarios regulares van a WelcomeScreen (pantalla pública)
+    Widget destination = const WelcomeScreen();
 
     // CRÍTICO: Sincronizar PRIMERO para asegurar que el usuario existe en Supabase
     // Esto es especialmente importante en web donde puede ser la primera vez
@@ -125,13 +146,19 @@ class _RoutingScreenState extends State<RoutingScreen> {
         destination = const DriverHomeScreen();
         break;
       default:
-        destination = const UserHomeScreen();
+        // Usuarios regulares van a WelcomeScreen (pantalla pública)
+        destination = const WelcomeScreen();
         break;
     }
 
-    // Navegar inmediatamente
+    // Actualizar el último usuario procesado
+    _lastProcessedUserId = user.uid;
+
+    // Navegar inmediatamente, limpiando todo el stack de navegación
+    // Esto asegura que no queden pantallas anteriores en el stack
     if (mounted) {
-      debugPrint('[RoutingScreen] 🚀 Navigating to destination...');
+      debugPrint('[RoutingScreen] 🚀 Navigating to destination for role: $role');
+      debugPrint('[RoutingScreen] 🚀 User UID: ${user.uid}');
       Navigator.of(
         context,
       ).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => destination), (route) => false);

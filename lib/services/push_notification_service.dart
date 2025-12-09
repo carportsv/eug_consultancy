@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../auth/supabase_service.dart';
 import '../auth/firebase_options.dart';
 import 'package:flutter/services.dart';
@@ -392,10 +393,29 @@ class PushNotificationService {
 /// IMPORTANTE: Este handler se ejecuta en un isolate separado cuando la app está en segundo plano
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Inicializar dotenv en el isolate de segundo plano (necesario para Firebase options)
+  try {
+    await dotenv.load(fileName: "env");
+  } catch (e) {
+    // Si no se puede cargar dotenv, continuar de todas formas
+    // Firebase puede estar ya inicializado
+    if (kDebugMode) {
+      debugPrint('[PushNotificationService] ⚠️ No se pudo cargar dotenv en background handler: $e');
+    }
+  }
+
   // Inicializar Firebase en el isolate de segundo plano con las opciones correctas
   // Verificar si Firebase ya está inicializado (puede estar inicializado en algunos casos)
   if (Firebase.apps.isEmpty) {
-    await Firebase.initializeApp(options: await DefaultFirebaseOptions.currentPlatform);
+    try {
+      await Firebase.initializeApp(options: await DefaultFirebaseOptions.currentPlatform);
+    } catch (e) {
+      // Si falla la inicialización, continuar de todas formas
+      // La notificación se mostrará de todas formas
+      if (kDebugMode) {
+        debugPrint('[PushNotificationService] ⚠️ Error inicializando Firebase en background: $e');
+      }
+    }
   }
 
   if (kDebugMode) {

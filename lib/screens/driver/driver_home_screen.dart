@@ -31,6 +31,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   String? _activeRideId;
   bool _isLoading = true;
   RealtimeChannel? _notificationsChannel;
+  RealtimeChannel? _rideRequestsChannel; // Canal para escuchar cambios en ride_requests
   Timer? _refreshTimer;
 
   @override
@@ -42,6 +43,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   @override
   void dispose() {
     _notificationsChannel?.unsubscribe();
+    _rideRequestsChannel?.unsubscribe();
     _refreshTimer?.cancel();
     super.dispose();
   }
@@ -95,12 +97,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 }
               }
 
-              // Cargar notificaciones pendientes
+              // Cargar notificaciones pendientes (viajes pendientes)
               await _loadNotifications(driverId);
               // Cargar viaje activo
               await _loadActiveRide(driverId);
-              // Configurar suscripción en tiempo real
+              // Configurar suscripción en tiempo real para notificaciones (messages)
               _setupNotificationsSubscription(driverId);
+              // Configurar suscripción en tiempo real para viajes (ride_requests)
+              _setupRideRequestsSubscription(driverId);
               // Iniciar auto-refresh
               _startAutoRefresh();
             }
@@ -121,27 +125,28 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   Future<void> _loadNotifications(String driverId) async {
     try {
       final supabaseClient = _supabaseService.client;
-      final notifications = await supabaseClient
-          .from('messages')
-          .select('id, type, title, message')
+      // Contar viajes pendientes (requested y accepted) asignados a este driver
+      // Esto debe coincidir con lo que se muestra en la pantalla de solicitudes
+      final pendingRequests = await supabaseClient
+          .from('ride_requests')
+          .select('id')
           .eq('driver_id', driverId)
-          .eq('is_read', false)
-          .eq('type', 'ride_request'); // Cambiar a 'ride_request' que es el tipo permitido
+          .or('status.eq.requested,status.eq.accepted'); // Incluir ambos estados
+
+      final count = (pendingRequests as List).length;
 
       if (kDebugMode) {
-        debugPrint(
-          '[DriverHomeScreen] Notificaciones encontradas: ${(notifications as List).length}',
-        );
+        debugPrint('[DriverHomeScreen] Viajes pendientes encontrados: $count');
       }
 
       if (mounted) {
         setState(() {
-          _unreadNotificationsCount = (notifications as List).length;
+          _unreadNotificationsCount = count;
         });
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[DriverHomeScreen] Error cargando notificaciones: $e');
+        debugPrint('[DriverHomeScreen] Error cargando viajes pendientes: $e');
       }
     }
   }
@@ -403,6 +408,59 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
   }
 
+  /// Configurar suscripción en tiempo real para cambios en ride_requests
+  void _setupRideRequestsSubscription(String driverId) async {
+    try {
+      final supabaseClient = _supabaseService.client;
+
+      if (kDebugMode) {
+        debugPrint(
+          '[DriverHomeScreen] 🔌 Configurando suscripción a ride_requests para driver: $driverId',
+        );
+      }
+
+      // Cancelar suscripción anterior si existe
+      _rideRequestsChannel?.unsubscribe();
+
+      // Suscribirse a cambios en ride_requests para este driver
+      final channelName = 'driver-ride-requests-$driverId-${DateTime.now().millisecondsSinceEpoch}';
+
+      _rideRequestsChannel = supabaseClient
+          .channel(channelName)
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all, // Escuchar INSERT, UPDATE, DELETE
+            schema: 'public',
+            table: 'ride_requests',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'driver_id',
+              value: driverId,
+            ),
+            callback: (payload) {
+              if (kDebugMode) {
+                debugPrint('[DriverHomeScreen] 🔔 Cambio en ride_requests: ${payload.eventType}');
+              }
+              // Actualizar contador cuando cambien los viajes
+              if (_driverId != null) {
+                _loadNotifications(_driverId!);
+                _loadActiveRide(_driverId!);
+              }
+            },
+          )
+          .subscribe();
+
+      if (kDebugMode) {
+        debugPrint(
+          '[DriverHomeScreen] ✅ Suscripción a ride_requests configurada para driver: $driverId',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[DriverHomeScreen] ❌ Error configurando suscripción a ride_requests: $e');
+      }
+    }
+  }
+
   Future<void> _playNotificationSound() async {
     // Vibración
     try {
@@ -487,7 +545,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       }
 
       // 1. Cerrar sesión de Firebase primero
-    await FirebaseAuth.instance.signOut();
+      await FirebaseAuth.instance.signOut();
       if (kDebugMode) {
         debugPrint('[DriverHomeScreen] ✅ Sesión de Firebase cerrada');
       }
@@ -587,10 +645,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
 
     return Scaffold(
-          appBar: AppBar(
+      appBar: AppBar(
         title: Text('Inicio del Conductor', style: GoogleFonts.exo()),
-            backgroundColor: Colors.teal[700],
-            actions: [
+        backgroundColor: Colors.teal[700],
+        actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Actualizar',
@@ -600,13 +658,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               }
             },
           ),
-              IconButton(
-                icon: const Icon(Icons.logout),
-                tooltip: 'Cerrar Sesión',
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Cerrar Sesión',
             onPressed: _handleLogout,
-              ),
-            ],
           ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           if (_driverId != null) {
@@ -626,8 +684,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   color: Colors.blue[50],
                   borderRadius: BorderRadius.circular(12),
                 ),
-            child: Column(
-              children: [
+                child: Column(
+                  children: [
                     Text(
                       '¡Hola, ${_driverName ?? 'Conductor'}!',
                       style: GoogleFonts.exo(
@@ -649,7 +707,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               const SizedBox(height: 24),
 
               // Menú de acciones rápidas
-                Text(
+              Text(
                 'Acciones Rápidas',
                 style: GoogleFonts.exo(
                   fontSize: 18,
@@ -721,11 +779,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 subtitle: 'Salir de la aplicación',
                 onTap: _handleLogout,
                 color: Colors.red,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
+      ),
     );
   }
 

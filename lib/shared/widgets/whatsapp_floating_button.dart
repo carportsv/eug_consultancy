@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -42,21 +43,56 @@ class WhatsAppFloatingButton extends StatelessWidget {
       final message = prefilledMessage ?? 'Hola, necesito información sobre mis reservas';
 
       // Construir la URL de WhatsApp
-      // Formato: https://wa.me/NUMERO?text=MENSAJE
       final encodedMessage = Uri.encodeComponent(message);
-      final whatsappUrl = 'https://wa.me/$whatsappNumber?text=$encodedMessage';
+      final cleanNumber = whatsappNumber.replaceAll(RegExp(r'[^0-9]'), ''); // Solo números
 
-      final uri = Uri.parse(whatsappUrl);
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        // En Android, intentar múltiples métodos
+        // Método 1: whatsapp://send (más directo)
+        try {
+          final whatsappUri = Uri.parse('whatsapp://send?phone=$cleanNumber&text=$encodedMessage');
+          if (await canLaunchUrl(whatsappUri)) {
+            await launchUrl(whatsappUri, mode: LaunchMode.externalNonBrowserApplication);
+            return; // Éxito, salir
+          }
+        } catch (e) {
+          debugPrint('[WhatsApp] Error con whatsapp://: $e');
+        }
 
-      // Verificar si se puede abrir la URL
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication, // Abre en app externa
-        );
+        // Método 2: Intentar con wa.me (puede abrir WhatsApp si está instalado)
+        try {
+          final waMeUri = Uri.parse('https://wa.me/$cleanNumber?text=$encodedMessage');
+          if (await canLaunchUrl(waMeUri)) {
+            await launchUrl(waMeUri, mode: LaunchMode.externalApplication);
+            return; // Éxito, salir
+          }
+        } catch (e) {
+          debugPrint('[WhatsApp] Error con wa.me: $e');
+        }
+
+        // Método 3: Intentar abrir directamente sin verificar (último recurso)
+        try {
+          final whatsappUri = Uri.parse('whatsapp://send?phone=$cleanNumber&text=$encodedMessage');
+          await launchUrl(whatsappUri, mode: LaunchMode.externalNonBrowserApplication);
+        } catch (e) {
+          if (context.mounted) {
+            _showError(
+              context,
+              'No se pudo abrir WhatsApp. Asegúrate de que WhatsApp esté instalado.',
+            );
+          }
+        }
       } else {
-        if (context.mounted) {
-          _showError(context, 'No se pudo abrir WhatsApp');
+        // En web o iOS, usar wa.me
+        final whatsappUrl = 'https://wa.me/$whatsappNumber?text=$encodedMessage';
+        final uri = Uri.parse(whatsappUrl);
+
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (context.mounted) {
+            _showError(context, 'No se pudo abrir WhatsApp');
+          }
         }
       }
     } catch (e) {
