@@ -661,32 +661,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             ),
             child: const Center(child: CupertinoActivityIndicator(radius: 16)),
           ),
-          // Logo arriba a la izquierda
-          Positioned(
-            top: 20,
-            left: 16,
-            child: Image.asset(
-              'assets/images/logo_21.png',
-              width: 160,
-              height: 160,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 160,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.activeBlue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    CupertinoIcons.car,
-                    size: 80,
-                    color: CupertinoColors.activeBlue,
-                  ),
-                );
-              },
-            ),
-          ),
         ],
       );
     }
@@ -700,41 +674,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         CupertinoPageScaffold(
           navigationBar: CupertinoNavigationBar(
             backgroundColor: CupertinoColors.systemBackground,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Selector de idiomas
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: LanguageSelectorWidget(
-                    selectedLanguage: selectedLanguage,
-                    onLanguageChanged: (language) {
-                      final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
-                      localeProvider.setLocaleFromCode(language);
-                      if (kDebugMode) {
-                        debugPrint('[DriverHomeScreen] Idioma cambiado a: $language');
-                      }
-                    },
-                  ),
-                ),
-                CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  onPressed: () {
-                    if (_driverId != null) {
-                      _refreshHomeData();
-                    }
-                  },
-                  child: const Icon(CupertinoIcons.refresh, size: 22),
-                ),
-                const SizedBox(width: 8),
-                CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  onPressed: _handleLogout,
-                  child: const Icon(CupertinoIcons.power, size: 22),
-                ),
-              ],
+            trailing: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: LanguageSelectorWidget(
+                selectedLanguage: selectedLanguage,
+                onLanguageChanged: (language) {
+                  final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+                  localeProvider.setLocaleFromCode(language);
+                  if (kDebugMode) {
+                    debugPrint('[DriverHomeScreen] Idioma cambiado a: $language');
+                  }
+                },
+              ),
             ),
           ),
           child: SafeArea(
@@ -749,7 +700,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   },
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                  padding: const EdgeInsets.fromLTRB(16, 60, 16, 24),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       // Sección de bienvenida
@@ -929,33 +880,57 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                           );
                         },
                       ),
+                      const SizedBox(height: 32),
+                      // Logo centrado debajo del botón de cerrar sesión
+                      Center(
+                        child: Image.asset(
+                          'assets/images/logo_21.png',
+                          width: 200,
+                          height: 200,
+                          fit: BoxFit.scaleDown,
+                          errorBuilder: (context, error, stackTrace) {
+                            if (kDebugMode) {
+                              debugPrint('[DriverHomeScreen] ❌ Error cargando logo: $error');
+                              debugPrint('[DriverHomeScreen] StackTrace: $stackTrace');
+                            }
+                            return Container(
+                              width: 200,
+                              height: 200,
+                              decoration: BoxDecoration(
+                                color: CupertinoColors.activeBlue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    CupertinoIcons.car,
+                                    size: 100,
+                                    color: CupertinoColors.activeBlue,
+                                  ),
+                                  if (kDebugMode)
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 8),
+                                      child: Text(
+                                        'Logo no encontrado',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: CupertinoColors.systemGrey,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 40),
                     ]),
                   ),
                 ),
               ],
             ),
-          ),
-        ),
-        // Logo arriba a la izquierda
-        Positioned(
-          top: 8,
-          left: 16,
-          child: Image.asset(
-            'assets/images/logo_21.png',
-            width: 140,
-            height: 140,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  color: CupertinoColors.activeBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(CupertinoIcons.car, size: 70, color: CupertinoColors.activeBlue),
-              );
-            },
           ),
         ),
       ],

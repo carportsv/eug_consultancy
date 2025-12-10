@@ -43,7 +43,7 @@ class _LanguageSelectorWidgetState extends State<LanguageSelectorWidget> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: CupertinoColors.systemGrey6,
           borderRadius: BorderRadius.circular(8),
@@ -51,13 +51,22 @@ class _LanguageSelectorWidgetState extends State<LanguageSelectorWidget> {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              _languages[widget.selectedLanguage]!['flag']!,
-              style: const TextStyle(fontSize: 18),
+            SizedBox(
+              height: 24,
+              width: 24,
+              child: Center(
+                child: Text(
+                  _languages[widget.selectedLanguage]!['flag']!,
+                  style: const TextStyle(fontSize: 24),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ),
             const SizedBox(width: 6),
-            const Icon(Icons.keyboard_arrow_down, color: CupertinoColors.label, size: 16),
+            const Icon(Icons.keyboard_arrow_down, color: CupertinoColors.label, size: 20),
           ],
         ),
       ),
