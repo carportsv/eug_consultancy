@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // Constants (copiadas de welcome_screen.dart)
@@ -44,9 +45,9 @@ class _LanguageSelectorWidgetState extends State<LanguageSelectorWidget> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: CupertinoColors.systemGrey6,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+          border: Border.all(color: CupertinoColors.systemGrey4, width: 1),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -56,7 +57,7 @@ class _LanguageSelectorWidgetState extends State<LanguageSelectorWidget> {
               style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(width: 6),
-            const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 16),
+            const Icon(Icons.keyboard_arrow_down, color: CupertinoColors.label, size: 16),
           ],
         ),
       ),

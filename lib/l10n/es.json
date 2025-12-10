@@ -486,6 +486,23 @@
     "emailContent": "Bajo el GDPR utilizamos la base legal de consentimiento para cualquiera que se suscriba a nuestro boletín o lista de correo de marketing. Solo recopilamos ciertos datos sobre usted. Cualquier mensaje de marketing por email que enviemos se realiza a través de un EMS, proveedor de servicios de marketing por email.",
     "questions": "¿Preguntas sobre privacidad?",
     "contactUs": "Contáctanos y estaremos encantados de ayudarte"
+  },
+  "driver": {
+    "homeTitle": "Inicio del Conductor",
+    "welcomeGreeting": "¡Hola, {name}!",
+    "welcomeDescription": "Bienvenido a tu panel de control. Aquí puedes gestionar tus viajes y configuraciones.",
+    "requests": "Solicitudes",
+    "newRequests": "{count} nuevas",
+    "viewPendingRequests": "Ver solicitudes pendientes",
+    "availability": "Disponibilidad",
+    "toggleAvailability": "Activar o desactivar",
+    "activeRide": "Viaje Activo",
+    "manageActiveRide": "Gestionar viaje en curso",
+    "rideHistory": "Historial de Viajes",
+    "viewCompletedRides": "Ver viajes completados",
+    "settings": "Configuración",
+    "adjustPreferences": "Ajustar preferencias",
+    "logout": "Cerrar Sesión"
   }
 }
 

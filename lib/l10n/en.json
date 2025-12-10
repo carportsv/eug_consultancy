@@ -497,6 +497,23 @@
     "emailContent": "Under the GDPR we use the consent lawful basis for anyone subscribing to our newsletter or marketing mailing list. We only collect certain data about you. Any email marketing messages we send are done so through an EMS, email marketing service provider.",
     "questions": "Questions about privacy?",
     "contactUs": "Contact us and we will be happy to help you"
+  },
+  "driver": {
+    "homeTitle": "Driver Home",
+    "welcomeGreeting": "Hello, {name}!",
+    "welcomeDescription": "Welcome to your control panel. Here you can manage your trips and settings.",
+    "requests": "Requests",
+    "newRequests": "{count} new",
+    "viewPendingRequests": "View pending requests",
+    "availability": "Availability",
+    "toggleAvailability": "Activate or deactivate",
+    "activeRide": "Active Ride",
+    "manageActiveRide": "Manage ride in progress",
+    "rideHistory": "Ride History",
+    "viewCompletedRides": "View completed rides",
+    "settings": "Settings",
+    "adjustPreferences": "Adjust preferences",
+    "logout": "Logout"
   }
 }
 

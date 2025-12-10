@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:provider/provider.dart';
 import '../../auth/login_screen.dart';
 import '../../auth/supabase_service.dart';
 import 'package:flutter/foundation.dart';
@@ -15,6 +17,9 @@ import 'driver_ride_screen.dart';
 import 'driver_history_screen.dart';
 import 'driver_settings_screen.dart';
 import '../../services/push_notification_service.dart';
+import '../../l10n/locale_provider.dart';
+import '../../l10n/app_localizations.dart';
+import '../../screens/welcome/navbar/language_selector.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -635,231 +640,414 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Inicio del Conductor', style: GoogleFonts.exo()),
-          backgroundColor: Colors.teal[700],
-        ),
-        body: const Center(child: CircularProgressIndicator()),
+      final localeProvider = Provider.of<LocaleProvider>(context, listen: true);
+      final selectedLanguage = localeProvider.locale.languageCode;
+
+      return Stack(
+        children: <Widget>[
+          CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(
+              backgroundColor: CupertinoColors.systemBackground,
+              trailing: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: LanguageSelectorWidget(
+                  selectedLanguage: selectedLanguage,
+                  onLanguageChanged: (language) {
+                    final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+                    localeProvider.setLocaleFromCode(language);
+                  },
+                ),
+              ),
+            ),
+            child: const Center(child: CupertinoActivityIndicator(radius: 16)),
+          ),
+          // Logo arriba a la izquierda
+          Positioned(
+            top: 20,
+            left: 16,
+            child: Image.asset(
+              'assets/images/logo_21.png',
+              width: 160,
+              height: 160,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.activeBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.car,
+                    size: 80,
+                    color: CupertinoColors.activeBlue,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Inicio del Conductor', style: GoogleFonts.exo()),
-        backgroundColor: Colors.teal[700],
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Actualizar',
-            onPressed: () {
-              if (_driverId != null) {
-                _refreshHomeData();
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar Sesión',
-            onPressed: _handleLogout,
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          if (_driverId != null) {
-            await _refreshHomeData();
-          }
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Sección de bienvenida
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12),
+    // Obtener idioma seleccionado del LocaleProvider
+    final localeProvider = Provider.of<LocaleProvider>(context, listen: true);
+    final selectedLanguage = localeProvider.locale.languageCode;
+
+    return Stack(
+      children: <Widget>[
+        CupertinoPageScaffold(
+          navigationBar: CupertinoNavigationBar(
+            backgroundColor: CupertinoColors.systemBackground,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Selector de idiomas
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: LanguageSelectorWidget(
+                    selectedLanguage: selectedLanguage,
+                    onLanguageChanged: (language) {
+                      final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+                      localeProvider.setLocaleFromCode(language);
+                      if (kDebugMode) {
+                        debugPrint('[DriverHomeScreen] Idioma cambiado a: $language');
+                      }
+                    },
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    Text(
-                      '¡Hola, ${_driverName ?? 'Conductor'}!',
-                      style: GoogleFonts.exo(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[700],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Bienvenido a tu panel de control. Aquí puedes gestionar tus viajes y configuraciones.',
-                      style: GoogleFonts.exo(fontSize: 16, color: Colors.grey[700]),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  onPressed: () {
+                    if (_driverId != null) {
+                      _refreshHomeData();
+                    }
+                  },
+                  child: const Icon(CupertinoIcons.refresh, size: 22),
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // Menú de acciones rápidas
-              Text(
-                'Acciones Rápidas',
-                style: GoogleFonts.exo(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Card de Solicitudes
-              _buildMenuCard(
-                icon: Icons.assignment,
-                title: 'Solicitudes',
-                subtitle: _unreadNotificationsCount > 0
-                    ? 'Ver solicitudes de viajes pendientes ($_unreadNotificationsCount nuevas)'
-                    : 'Ver solicitudes de viajes pendientes',
-                onTap: () => _navigateToScreen('driver_requests'),
-                badge: _unreadNotificationsCount > 0 ? _unreadNotificationsCount : null,
-              ),
-
-              const SizedBox(height: 12),
-
-              // Card de Disponibilidad
-              _buildMenuCard(
-                icon: Icons.toggle_on,
-                title: 'Disponibilidad',
-                subtitle: 'Activar o desactivar disponibilidad',
-                onTap: () => _navigateToScreen('driver_availability'),
-              ),
-
-              // Card de Viaje Activo (solo si hay uno)
-              if (_activeRideId != null) ...[
-                const SizedBox(height: 12),
-                _buildMenuCard(
-                  icon: Icons.directions_car,
-                  title: 'Viaje Activo',
-                  subtitle: 'Gestionar viaje en curso',
-                  onTap: () => _navigateToScreen('driver_ride'),
-                  color: Colors.green,
+                const SizedBox(width: 8),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  onPressed: _handleLogout,
+                  child: const Icon(CupertinoIcons.power, size: 22),
                 ),
               ],
+            ),
+          ),
+          child: SafeArea(
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              slivers: [
+                CupertinoSliverRefreshControl(
+                  onRefresh: () async {
+                    if (_driverId != null) {
+                      await _refreshHomeData();
+                    }
+                  },
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      // Sección de bienvenida
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemGrey6,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Builder(
+                          builder: (context) {
+                            final l10n = AppLocalizations.of(context);
+                            final greeting =
+                                (l10n?.translate('driver.welcomeGreeting') ?? '¡Hola, {name}!')
+                                    .replaceAll('{name}', _driverName ?? 'Conductor');
+                            final description =
+                                l10n?.translate('driver.welcomeDescription') ??
+                                'Bienvenido a tu panel de control. Aquí puedes gestionar tus viajes y configuraciones.';
+                            return Column(
+                              children: [
+                                Text(
+                                  greeting,
+                                  style: GoogleFonts.exo(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: CupertinoColors.label,
+                                    decoration: TextDecoration.none,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  description,
+                                  style: GoogleFonts.exo(
+                                    fontSize: 15,
+                                    color: CupertinoColors.secondaryLabel,
+                                    height: 1.4,
+                                    decoration: TextDecoration.none,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 32),
 
-              const SizedBox(height: 12),
+                      // Lista de opciones con estilo Cupertino
+                      Container(
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemBackground,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Builder(
+                          builder: (context) {
+                            final l10n = AppLocalizations.of(context);
+                            return Column(
+                              children: [
+                                // Solicitudes
+                                _buildCupertinoListTile(
+                                  icon: CupertinoIcons.doc_text,
+                                  title: l10n?.translate('driver.requests') ?? 'Solicitudes',
+                                  subtitle: _unreadNotificationsCount > 0
+                                      ? (l10n?.translate('driver.newRequests') ?? '{count} nuevas')
+                                            .replaceAll(
+                                              '{count}',
+                                              _unreadNotificationsCount.toString(),
+                                            )
+                                      : l10n?.translate('driver.viewPendingRequests') ??
+                                            'Ver solicitudes pendientes',
+                                  onTap: () => _navigateToScreen('driver_requests'),
+                                  badge: _unreadNotificationsCount > 0
+                                      ? _unreadNotificationsCount
+                                      : null,
+                                  isFirst: true,
+                                ),
+                                const Divider(height: 1, indent: 60),
 
-              // Card de Historial
-              _buildMenuCard(
-                icon: Icons.history,
-                title: 'Historial de Viajes',
-                subtitle: 'Ver viajes completados',
-                onTap: () => _navigateToScreen('driver_history'),
-              ),
+                                // Disponibilidad
+                                _buildCupertinoListTile(
+                                  icon: CupertinoIcons.location,
+                                  title: l10n?.translate('driver.availability') ?? 'Disponibilidad',
+                                  subtitle:
+                                      l10n?.translate('driver.toggleAvailability') ??
+                                      'Activar o desactivar',
+                                  onTap: () => _navigateToScreen('driver_availability'),
+                                ),
+                                const Divider(height: 1, indent: 60),
 
-              const SizedBox(height: 12),
+                                // Viaje Activo (solo si hay uno)
+                                if (_activeRideId != null) ...[
+                                  _buildCupertinoListTile(
+                                    icon: CupertinoIcons.car,
+                                    title: l10n?.translate('driver.activeRide') ?? 'Viaje Activo',
+                                    subtitle:
+                                        l10n?.translate('driver.manageActiveRide') ??
+                                        'Gestionar viaje en curso',
+                                    onTap: () => _navigateToScreen('driver_ride'),
+                                    color: CupertinoColors.systemGreen,
+                                  ),
+                                  const Divider(height: 1, indent: 60),
+                                ],
 
-              // Card de Configuración
-              _buildMenuCard(
-                icon: Icons.settings,
-                title: 'Configuración',
-                subtitle: 'Ajustar preferencias de la app',
-                onTap: () => _navigateToScreen('driver_settings'),
-              ),
+                                // Historial
+                                _buildCupertinoListTile(
+                                  icon: CupertinoIcons.clock,
+                                  title:
+                                      l10n?.translate('driver.rideHistory') ??
+                                      'Historial de Viajes',
+                                  subtitle:
+                                      l10n?.translate('driver.viewCompletedRides') ??
+                                      'Ver viajes completados',
+                                  onTap: () => _navigateToScreen('driver_history'),
+                                ),
+                                const Divider(height: 1, indent: 60),
 
-              const SizedBox(height: 12),
+                                // Configuración
+                                _buildCupertinoListTile(
+                                  icon: CupertinoIcons.settings,
+                                  title: l10n?.translate('driver.settings') ?? 'Configuración',
+                                  subtitle:
+                                      l10n?.translate('driver.adjustPreferences') ??
+                                      'Ajustar preferencias',
+                                  onTap: () => _navigateToScreen('driver_settings'),
+                                  isLast: true,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
 
-              // Card de Cerrar Sesión
-              _buildMenuCard(
-                icon: Icons.logout,
-                title: 'Cerrar Sesión',
-                subtitle: 'Salir de la aplicación',
-                onTap: _handleLogout,
-                color: Colors.red,
-              ),
-            ],
+                      const SizedBox(height: 50),
+
+                      // Botón de Cerrar Sesión
+                      Builder(
+                        builder: (context) {
+                          final l10n = AppLocalizations.of(context);
+                          return CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: _handleLogout,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              decoration: BoxDecoration(
+                                color: CupertinoColors.systemBackground,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: CupertinoColors.destructiveRed.withValues(alpha: 0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    CupertinoIcons.power,
+                                    color: CupertinoColors.destructiveRed,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    l10n?.translate('driver.logout') ??
+                                        l10n?.logout ??
+                                        'Cerrar Sesión',
+                                    style: GoogleFonts.exo(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600,
+                                      color: CupertinoColors.destructiveRed,
+                                      decoration: TextDecoration.none,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ]),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
+        // Logo arriba a la izquierda
+        Positioned(
+          top: 8,
+          left: 16,
+          child: Image.asset(
+            'assets/images/logo_21.png',
+            width: 140,
+            height: 140,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.activeBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(CupertinoIcons.car, size: 70, color: CupertinoColors.activeBlue),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildMenuCard({
+  Widget _buildCupertinoListTile({
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
     int? badge,
     Color? color,
+    bool isFirst = false,
+    bool isLast = false,
   }) {
-    final cardColor = color ?? Colors.blue[700]!;
-    final isLogout = title == 'Cerrar Sesión';
+    final iconColor = color ?? CupertinoColors.activeBlue;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: cardColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: isLogout ? Colors.red : cardColor, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.exo(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: isLogout ? Colors.red : Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.exo(
-                        fontSize: 14,
-                        color: isLogout ? Colors.red[300] : Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (badge != null && badge > 0)
-                Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    badge.toString(),
-                    style: GoogleFonts.exo(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              Icon(Icons.chevron_right, color: Colors.grey[400]),
-            ],
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      minimumSize: Size.zero,
+      onPressed: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemBackground,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(isFirst ? 12 : 0),
+            topRight: Radius.circular(isFirst ? 12 : 0),
+            bottomLeft: Radius.circular(isLast ? 12 : 0),
+            bottomRight: Radius.circular(isLast ? 12 : 0),
           ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.exo(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: CupertinoColors.label,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.exo(
+                      fontSize: 14,
+                      color: CupertinoColors.secondaryLabel,
+                      decoration: TextDecoration.none,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (badge != null && badge > 0) ...[
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.destructiveRed,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  badge.toString(),
+                  style: GoogleFonts.exo(
+                    color: CupertinoColors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+            Icon(CupertinoIcons.chevron_right, color: CupertinoColors.tertiaryLabel, size: 18),
+          ],
         ),
       ),
     );

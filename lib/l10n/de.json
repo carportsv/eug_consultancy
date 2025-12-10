@@ -488,6 +488,23 @@
     "emailContent": "Gemäß DSGVO verwenden wir die Einwilligungsgrundlage für jeden, der unseren Newsletter oder unsere Marketing-Mailingliste abonniert. Wir sammeln nur bestimmte Daten über Sie. Alle E-Mail-Marketing-Nachrichten, die wir senden, werden über einen EMS, E-Mail-Marketing-Dienstanbieter, verschickt.",
     "questions": "Fragen zum Datenschutz?",
     "contactUs": "Kontaktieren Sie uns und wir helfen Ihnen gerne"
+  },
+  "driver": {
+    "homeTitle": "Fahrer Startseite",
+    "welcomeGreeting": "Hallo, {name}!",
+    "welcomeDescription": "Willkommen in Ihrem Kontrollpanel. Hier können Sie Ihre Fahrten und Einstellungen verwalten.",
+    "requests": "Anfragen",
+    "newRequests": "{count} neue",
+    "viewPendingRequests": "Ausstehende Anfragen anzeigen",
+    "availability": "Verfügbarkeit",
+    "toggleAvailability": "Aktivieren oder deaktivieren",
+    "activeRide": "Aktive Fahrt",
+    "manageActiveRide": "Laufende Fahrt verwalten",
+    "rideHistory": "Fahrtverlauf",
+    "viewCompletedRides": "Abgeschlossene Fahrten anzeigen",
+    "settings": "Einstellungen",
+    "adjustPreferences": "Einstellungen anpassen",
+    "logout": "Abmelden"
   }
 }
 

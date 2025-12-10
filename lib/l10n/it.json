@@ -488,6 +488,23 @@
     "emailContent": "Ai sensi del GDPR utilizziamo la base legale del consenso per chiunque si iscriva alla nostra newsletter o mailing list di marketing. Raccogliamo solo determinati dati su di te. Qualsiasi messaggio di marketing via email che inviamo viene fatto tramite un EMS, fornitore di servizi di email marketing.",
     "questions": "Domande sulla privacy?",
     "contactUs": "Contattaci e saremo felici di aiutarti"
+  },
+  "driver": {
+    "homeTitle": "Home del Conducente",
+    "welcomeGreeting": "Ciao, {name}!",
+    "welcomeDescription": "Benvenuto nella tua dashboard. Qui puoi gestire i tuoi viaggi e le impostazioni.",
+    "requests": "Richieste",
+    "newRequests": "{count} nuove",
+    "viewPendingRequests": "Visualizza richieste in sospeso",
+    "availability": "Disponibilità",
+    "toggleAvailability": "Attiva o disattiva",
+    "activeRide": "Viaggio Attivo",
+    "manageActiveRide": "Gestisci viaggio in corso",
+    "rideHistory": "Cronologia Viaggi",
+    "viewCompletedRides": "Visualizza viaggi completati",
+    "settings": "Impostazioni",
+    "adjustPreferences": "Regola le preferenze",
+    "logout": "Esci"
   }
 }
 

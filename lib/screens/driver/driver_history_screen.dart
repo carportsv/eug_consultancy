@@ -1,5 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../auth/supabase_service.dart';
 import 'package:flutter/foundation.dart';
@@ -101,15 +101,15 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'completed':
-        return Colors.green;
+        return CupertinoColors.systemGreen;
       case 'cancelled':
-        return Colors.red;
+        return CupertinoColors.destructiveRed;
       case 'in_progress':
-        return Colors.blue;
+        return CupertinoColors.activeBlue;
       case 'accepted':
-        return Colors.orange;
+        return CupertinoColors.systemOrange;
       default:
-        return Colors.grey;
+        return CupertinoColors.systemGrey;
     }
   }
 
@@ -130,142 +130,191 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Historial de Viajes', style: GoogleFonts.exo()),
-        backgroundColor: Colors.teal[700],
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadHistory,
-            tooltip: 'Actualizar',
-          ),
-        ],
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: Text('Historial de Viajes', style: GoogleFonts.exo(fontWeight: FontWeight.w600)),
+        backgroundColor: CupertinoColors.systemBackground,
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: Size.zero,
+          onPressed: _loadHistory,
+          child: const Icon(CupertinoIcons.refresh, size: 22),
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _rides.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history, size: 80, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay viajes en el historial',
-                    style: GoogleFonts.exo(fontSize: 18, color: Colors.grey[600]),
+      child: SafeArea(
+        child: _isLoading
+            ? const Center(child: CupertinoActivityIndicator(radius: 16))
+            : _rides.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(CupertinoIcons.clock, size: 80, color: CupertinoColors.tertiaryLabel),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No hay viajes en el historial',
+                      style: GoogleFonts.exo(
+                        fontSize: 18,
+                        color: CupertinoColors.label,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                slivers: [
+                  CupertinoSliverRefreshControl(onRefresh: _loadHistory),
+                  SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final ride = _rides[index];
+                        final origin = ride['origin'] as Map?;
+                        final destination = ride['destination'] as Map?;
+                        final user = ride['user'] as Map?;
+                        final status = ride['status']?.toString() ?? 'unknown';
+                        final createdAt = ride['created_at']?.toString();
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: CupertinoColors.systemBackground,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _getStatusColor(status).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        _getStatusText(status),
+                                        style: GoogleFonts.exo(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: _getStatusColor(status),
+                                          decoration: TextDecoration.none,
+                                        ),
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    if (createdAt != null)
+                                      Text(
+                                        DateFormat(
+                                          'dd/MM/yyyy HH:mm',
+                                        ).format(DateTime.parse(createdAt)),
+                                        style: GoogleFonts.exo(
+                                          fontSize: 12,
+                                          color: CupertinoColors.secondaryLabel,
+                                          decoration: TextDecoration.none,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      CupertinoIcons.location,
+                                      size: 20,
+                                      color: CupertinoColors.activeBlue,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        origin?['address']?.toString() ?? 'Origen no especificado',
+                                        style: GoogleFonts.exo(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: CupertinoColors.label,
+                                          decoration: TextDecoration.none,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      CupertinoIcons.location_solid,
+                                      size: 20,
+                                      color: CupertinoColors.destructiveRed,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        destination?['address']?.toString() ??
+                                            'Destino no especificado',
+                                        style: GoogleFonts.exo(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: CupertinoColors.label,
+                                          decoration: TextDecoration.none,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      CupertinoIcons.person,
+                                      size: 16,
+                                      color: CupertinoColors.secondaryLabel,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      user?['display_name']?.toString() ??
+                                          user?['email']?.toString() ??
+                                          'Usuario',
+                                      style: GoogleFonts.exo(
+                                        fontSize: 14,
+                                        color: CupertinoColors.secondaryLabel,
+                                        decoration: TextDecoration.none,
+                                      ),
+                                    ),
+                                    if (ride['price'] != null) ...[
+                                      const Spacer(),
+                                      Text(
+                                        '\$${ride['price'].toStringAsFixed(2)}',
+                                        style: GoogleFonts.exo(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                          color: CupertinoColors.systemGreen,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }, childCount: _rides.length),
+                    ),
                   ),
                 ],
               ),
-            )
-          : RefreshIndicator(
-              onRefresh: _loadHistory,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _rides.length,
-                itemBuilder: (context, index) {
-                  final ride = _rides[index];
-                  final origin = ride['origin'] as Map?;
-                  final destination = ride['destination'] as Map?;
-                  final user = ride['user'] as Map?;
-                  final status = ride['status']?.toString() ?? 'unknown';
-                  final createdAt = ride['created_at']?.toString();
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(status).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  _getStatusText(status),
-                                  style: GoogleFonts.exo(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: _getStatusColor(status),
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                              if (createdAt != null)
-                                Text(
-                                  DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(createdAt)),
-                                  style: GoogleFonts.exo(fontSize: 12, color: Colors.grey[600]),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Icon(Icons.location_on, size: 20, color: Colors.blue[700]),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  origin?['address']?.toString() ?? 'Origen no especificado',
-                                  style: GoogleFonts.exo(fontSize: 14, fontWeight: FontWeight.w500),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(Icons.location_on, size: 20, color: Colors.red[700]),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  destination?['address']?.toString() ?? 'Destino no especificado',
-                                  style: GoogleFonts.exo(fontSize: 14, fontWeight: FontWeight.w500),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Icon(Icons.person, size: 16, color: Colors.grey[600]),
-                              const SizedBox(width: 4),
-                              Text(
-                                user?['display_name']?.toString() ??
-                                    user?['email']?.toString() ??
-                                    'Usuario',
-                                style: GoogleFonts.exo(fontSize: 14, color: Colors.grey[700]),
-                              ),
-                              if (ride['price'] != null) ...[
-                                const Spacer(),
-                                Text(
-                                  '\$${ride['price'].toStringAsFixed(2)}',
-                                  style: GoogleFonts.exo(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green[700],
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+      ),
     );
   }
 }

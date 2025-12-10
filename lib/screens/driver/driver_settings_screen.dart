@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class DriverSettingsScreen extends StatefulWidget {
@@ -13,54 +14,80 @@ class _DriverSettingsScreenState extends State<DriverSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Configuración', style: GoogleFonts.exo()),
-        backgroundColor: Colors.teal[700],
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: Text('Configuración', style: GoogleFonts.exo(fontWeight: FontWeight.w600)),
+        backgroundColor: CupertinoColors.systemBackground,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildSettingTile(
-            icon: Icons.notifications,
-            title: 'Notificaciones',
-            subtitle: 'Recibir notificaciones de viajes',
-            trailing: Switch(
-              value: _notificationsEnabled,
-              onChanged: (value) {
-                setState(() => _notificationsEnabled = value);
-              },
+      child: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  Container(
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.systemBackground,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingTile(
+                          icon: CupertinoIcons.bell,
+                          title: 'Notificaciones',
+                          subtitle: 'Recibir notificaciones de viajes',
+                          trailing: CupertinoSwitch(
+                            value: _notificationsEnabled,
+                            onChanged: (value) {
+                              setState(() => _notificationsEnabled = value);
+                            },
+                          ),
+                          isFirst: true,
+                        ),
+                        const Divider(height: 1, indent: 60),
+                        _buildSettingTile(
+                          icon: CupertinoIcons.person,
+                          title: 'Editar Perfil',
+                          subtitle: 'Modificar información personal',
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Pantalla de perfil en desarrollo',
+                                  style: GoogleFonts.exo(),
+                                ),
+                                backgroundColor: CupertinoColors.systemOrange,
+                              ),
+                            );
+                          },
+                        ),
+                        const Divider(height: 1, indent: 60),
+                        _buildSettingTile(
+                          icon: CupertinoIcons.car,
+                          title: 'Información del Vehículo',
+                          subtitle: 'Gestionar datos del carro',
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Pantalla de vehículo en desarrollo',
+                                  style: GoogleFonts.exo(),
+                                ),
+                                backgroundColor: CupertinoColors.systemOrange,
+                              ),
+                            );
+                          },
+                          isLast: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ]),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          _buildSettingTile(
-            icon: Icons.person,
-            title: 'Editar Perfil',
-            subtitle: 'Modificar información personal',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Pantalla de perfil en desarrollo', style: GoogleFonts.exo()),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          _buildSettingTile(
-            icon: Icons.directions_car,
-            title: 'Información del Vehículo',
-            subtitle: 'Gestionar datos del carro',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Pantalla de vehículo en desarrollo', style: GoogleFonts.exo()),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            },
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -71,23 +98,66 @@ class _DriverSettingsScreenState extends State<DriverSettingsScreen> {
     required String subtitle,
     Widget? trailing,
     VoidCallback? onTap,
+    bool isFirst = false,
+    bool isLast = false,
   }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      minimumSize: Size.zero,
+      onPressed: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: CupertinoColors.systemBackground,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(isFirst ? 12 : 0),
+            topRight: Radius.circular(isFirst ? 12 : 0),
+            bottomLeft: Radius.circular(isLast ? 12 : 0),
+            bottomRight: Radius.circular(isLast ? 12 : 0),
           ),
-          child: Icon(icon, color: Colors.blue[700]),
         ),
-        title: Text(title, style: GoogleFonts.exo(fontSize: 16, fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle, style: GoogleFonts.exo(fontSize: 14, color: Colors.grey[600])),
-        trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
-        onTap: onTap,
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: CupertinoColors.activeBlue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: CupertinoColors.activeBlue, size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.exo(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: CupertinoColors.label,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.exo(
+                      fontSize: 14,
+                      color: CupertinoColors.secondaryLabel,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (trailing != null) trailing,
+            if (trailing == null && onTap != null)
+              Icon(CupertinoIcons.chevron_right, color: CupertinoColors.tertiaryLabel, size: 18),
+          ],
+        ),
       ),
     );
   }

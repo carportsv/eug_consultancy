@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../auth/supabase_service.dart';
 import 'package:flutter/foundation.dart';
@@ -19,7 +20,6 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
   List<Map<String, dynamic>> _requests = [];
   bool _isLoading = true;
   Map<String, dynamic>? _selectedRequest;
-  bool _showModal = false;
   bool _accepting = false;
   bool _rejecting = false;
   Timer? _refreshTimer;
@@ -262,13 +262,13 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
   void _showRequestDetails(Map<String, dynamic> request) {
     setState(() {
       _selectedRequest = request;
-      _showModal = true;
     });
+    showCupertinoModalPopup(context: context, builder: (context) => _buildDetailsModal());
   }
 
   void _closeModal() {
+    Navigator.of(context).pop();
     setState(() {
-      _showModal = false;
       _selectedRequest = null;
     });
   }
@@ -313,7 +313,7 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Viaje aceptado exitosamente', style: GoogleFonts.exo()),
-            backgroundColor: Colors.green,
+            backgroundColor: CupertinoColors.systemGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -326,7 +326,7 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al aceptar viaje: ${e.toString()}', style: GoogleFonts.exo()),
-            backgroundColor: Colors.red,
+            backgroundColor: CupertinoColors.destructiveRed,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -418,7 +418,7 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Viaje rechazado', style: GoogleFonts.exo()),
-            backgroundColor: Colors.orange,
+            backgroundColor: CupertinoColors.systemOrange,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -431,7 +431,7 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al rechazar viaje: ${e.toString()}', style: GoogleFonts.exo()),
-            backgroundColor: Colors.red,
+            backgroundColor: CupertinoColors.destructiveRed,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -462,174 +462,205 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Solicitudes de Viajes', style: GoogleFonts.exo()),
-        backgroundColor: Colors.teal[700],
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _loadRequests(force: true),
-            tooltip: 'Actualizar',
-          ),
-        ],
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: Text('Solicitudes de Viajes', style: GoogleFonts.exo(fontWeight: FontWeight.w600)),
+        backgroundColor: CupertinoColors.systemBackground,
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: Size.zero,
+          onPressed: () => _loadRequests(force: true),
+          child: const Icon(CupertinoIcons.refresh, size: 22),
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _requests.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.assignment_outlined, size: 80, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay solicitudes disponibles',
-                    style: GoogleFonts.exo(fontSize: 18, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Las nuevas solicitudes aparecerán aquí',
-                    style: GoogleFonts.exo(fontSize: 14, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: () => _loadRequests(force: true),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _requests.length,
-                itemBuilder: (context, index) {
-                  final request = _requests[index];
-                  final origin = request['origin'] as Map?;
-                  final destination = request['destination'] as Map?;
-                  final user = request['user'] as Map?;
+      child: SafeArea(
+        child: _isLoading
+            ? const Center(child: CupertinoActivityIndicator(radius: 16))
+            : _requests.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(CupertinoIcons.doc_text, size: 80, color: CupertinoColors.tertiaryLabel),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No hay solicitudes disponibles',
+                      style: GoogleFonts.exo(
+                        fontSize: 18,
+                        color: CupertinoColors.label,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Las nuevas solicitudes aparecerán aquí',
+                      style: GoogleFonts.exo(fontSize: 14, color: CupertinoColors.secondaryLabel),
+                    ),
+                  ],
+                ),
+              )
+            : CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                slivers: [
+                  CupertinoSliverRefreshControl(onRefresh: () => _loadRequests(force: true)),
+                  SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final request = _requests[index];
+                        final origin = request['origin'] as Map?;
+                        final destination = request['destination'] as Map?;
+                        final user = request['user'] as Map?;
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: InkWell(
-                      onTap: () => _showRequestDetails(request),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(Icons.location_on, color: Colors.blue[700], size: 20),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: CupertinoColors.systemBackground,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: () => _showRequestDetails(request),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
                                     children: [
-                                      Text(
-                                        origin?['address']?.toString() ?? 'Origen no especificado',
-                                        style: GoogleFonts.exo(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: CupertinoColors.activeBlue.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(10),
                                         ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                        child: Icon(
+                                          CupertinoIcons.location,
+                                          color: CupertinoColors.activeBlue,
+                                          size: 22,
+                                        ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.arrow_downward,
-                                            size: 16,
-                                            color: Colors.grey[600],
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              destination?['address']?.toString() ??
-                                                  'Destino no especificado',
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              origin?['address']?.toString() ??
+                                                  'Origen no especificado',
                                               style: GoogleFonts.exo(
-                                                fontSize: 14,
-                                                color: Colors.grey[700],
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.w600,
+                                                color: CupertinoColors.label,
+                                                decoration: TextDecoration.none,
                                               ),
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Icon(Icons.person, size: 16, color: Colors.grey[600]),
-                                const SizedBox(width: 4),
-                                Text(
-                                  user?['display_name']?.toString() ??
-                                      user?['email']?.toString() ??
-                                      'Usuario',
-                                  style: GoogleFonts.exo(fontSize: 14, color: Colors.grey[700]),
-                                ),
-                                const Spacer(),
-                                if (request['distance'] != null)
-                                  Row(
-                                    children: [
-                                      Icon(Icons.straighten, size: 16, color: Colors.grey[600]),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        _formatDistance(request['distance']),
-                                        style: GoogleFonts.exo(
-                                          fontSize: 14,
-                                          color: Colors.grey[700],
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  CupertinoIcons.arrow_down,
+                                                  size: 14,
+                                                  color: CupertinoColors.secondaryLabel,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Text(
+                                                    destination?['address']?.toString() ??
+                                                        'Destino no especificado',
+                                                    style: GoogleFonts.exo(
+                                                      fontSize: 15,
+                                                      color: CupertinoColors.secondaryLabel,
+                                                      decoration: TextDecoration.none,
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
-                              ],
-                            ),
-                            if (request['price'] != null) ...[
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(Icons.attach_money, size: 16, color: Colors.green[700]),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '\$${request['price'].toStringAsFixed(2)}',
-                                    style: GoogleFonts.exo(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green[700],
-                                    ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        CupertinoIcons.person,
+                                        size: 16,
+                                        color: CupertinoColors.secondaryLabel,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        user?['display_name']?.toString() ??
+                                            user?['email']?.toString() ??
+                                            'Usuario',
+                                        style: GoogleFonts.exo(
+                                          fontSize: 14,
+                                          color: CupertinoColors.secondaryLabel,
+                                          decoration: TextDecoration.none,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      if (request['distance'] != null)
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              CupertinoIcons.arrow_left_right,
+                                              size: 16,
+                                              color: CupertinoColors.secondaryLabel,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              _formatDistance(request['distance']),
+                                              style: GoogleFonts.exo(
+                                                fontSize: 14,
+                                                color: CupertinoColors.secondaryLabel,
+                                                decoration: TextDecoration.none,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                    ],
                                   ),
+                                  if (request['price'] != null) ...[
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons.money_dollar,
+                                          size: 16,
+                                          color: CupertinoColors.systemGreen,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '\$${request['price'].toStringAsFixed(2)}',
+                                          style: GoogleFonts.exo(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.bold,
+                                            color: CupertinoColors.systemGreen,
+                                            decoration: TextDecoration.none,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ],
                               ),
-                            ],
-                          ],
-                        ),
-                      ),
+                            ),
+                          ),
+                        );
+                      }, childCount: _requests.length),
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _loadRequests(force: true),
-        backgroundColor: Colors.teal[700],
-        child: const Icon(Icons.refresh),
       ),
-      // Modal de detalles
-      bottomSheet: _showModal && _selectedRequest != null ? _buildDetailsModal() : null,
     );
   }
 
@@ -641,9 +672,9 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
 
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBackground,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -653,13 +684,23 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
             children: [
               Text(
                 'Detalles del Viaje',
-                style: GoogleFonts.exo(fontSize: 20, fontWeight: FontWeight.bold),
+                style: GoogleFonts.exo(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: CupertinoColors.label,
+                  decoration: TextDecoration.none,
+                ),
               ),
               const Spacer(),
-              IconButton(icon: const Icon(Icons.close), onPressed: _closeModal),
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                onPressed: _closeModal,
+                child: const Icon(CupertinoIcons.xmark, size: 22),
+              ),
             ],
           ),
-          const Divider(),
+          const Divider(height: 1),
           const SizedBox(height: 16),
           _buildDetailRow(
             Icons.location_on,
@@ -721,43 +762,36 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: CupertinoButton(
                   onPressed: (_accepting || _rejecting) ? null : _closeModal,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                  color: CupertinoColors.systemGrey5,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Text(
                     'Cerrar',
-                    style: GoogleFonts.exo(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.exo(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: CupertinoColors.label,
+                      decoration: TextDecoration.none,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: OutlinedButton(
+                child: CupertinoButton(
                   onPressed: (_accepting || _rejecting) ? null : _rejectRequest,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                  color: CupertinoColors.destructiveRed.withValues(alpha: 0.1),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   child: _rejecting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
-                          ),
-                        )
+                      ? const CupertinoActivityIndicator(radius: 10)
                       : Text(
                           'Rechazar',
                           style: GoogleFonts.exo(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.red,
+                            color: CupertinoColors.destructiveRed,
+                            decoration: TextDecoration.none,
                           ),
                         ),
                 ),
@@ -765,28 +799,19 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
               const SizedBox(width: 12),
               Expanded(
                 flex: 2,
-                child: ElevatedButton(
+                child: CupertinoButton(
                   onPressed: (_accepting || _rejecting) ? null : _acceptRequest,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal[700],
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                  color: CupertinoColors.activeBlue,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   child: _accepting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
+                      ? const CupertinoActivityIndicator(radius: 10)
                       : Text(
                           'Aceptar Viaje',
                           style: GoogleFonts.exo(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: CupertinoColors.white,
+                            decoration: TextDecoration.none,
                           ),
                         ),
                 ),
@@ -808,9 +833,24 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: GoogleFonts.exo(fontSize: 12, color: Colors.grey[600])),
+              Text(
+                label,
+                style: GoogleFonts.exo(
+                  fontSize: 12,
+                  color: CupertinoColors.secondaryLabel,
+                  decoration: TextDecoration.none,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(value, style: GoogleFonts.exo(fontSize: 16, fontWeight: FontWeight.w500)),
+              Text(
+                value,
+                style: GoogleFonts.exo(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: CupertinoColors.label,
+                  decoration: TextDecoration.none,
+                ),
+              ),
             ],
           ),
         ),
