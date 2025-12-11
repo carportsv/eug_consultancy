@@ -113,27 +113,8 @@ class StripeService {
             };
           }
 
-          // 2. Verificar que Stripe helper esté disponible antes de intentar usarlo
-          if (!isStripeHelperAvailable()) {
-            if (kDebugMode) {
-              debugPrint('[StripeService] ⚠️ Stripe helper no disponible, esperando...');
-            }
-            // Esperar un poco y reintentar (puede ser un problema de timing)
-            await Future.delayed(const Duration(milliseconds: 500));
-            if (!isStripeHelperAvailable()) {
-              if (kDebugMode) {
-                debugPrint('[StripeService] ❌ Stripe helper aún no disponible después de esperar');
-              }
-              return {
-                'success': false,
-                'status': 'failed',
-                'error':
-                    'Stripe no está inicializado correctamente. Recarga la página e intenta nuevamente.',
-              };
-            }
-          }
-
-          // 3. Inicializar Stripe (esto es idempotente, puede llamarse múltiples veces)
+          // 2. Inicializar Stripe directamente (esto es idempotente, puede llamarse múltiples veces)
+          // Si las funciones no están disponibles, el error será capturado más abajo
           try {
             final initResult = stripeInitializeJS(publishableKey);
             await initResult.toDart;

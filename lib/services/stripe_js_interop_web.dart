@@ -91,38 +91,20 @@ external JSPromise<JSObject?> stripeConfirmPaymentJS(String clientSecret, String
 external JSObject get window;
 
 bool isStripeHelperAvailable() {
-  try {
-    // Convertir window a objeto Dart para acceder a propiedades dinámicas
-    final winObj = dartify(window) as Map<String, dynamic>?;
-    if (winObj == null) {
-      if (kDebugMode) {
-        debugPrint('[isStripeHelperAvailable] window es null');
-      }
-      return false;
-    }
-
-    final hasHelper = winObj['stripeHelper'] != null;
-    final hasInitialize = winObj['stripeInitialize'] != null;
-    final hasCreatePaymentMethod = winObj['stripeCreatePaymentMethod'] != null;
-    final hasConfirmPayment = winObj['stripeConfirmPayment'] != null;
-    final hasStripe = winObj['Stripe'] != null;
-
-    if (kDebugMode) {
-      debugPrint('[isStripeHelperAvailable] Verificando disponibilidad:');
-      debugPrint('  - stripeHelper: $hasHelper');
-      debugPrint('  - stripeInitialize: $hasInitialize');
-      debugPrint('  - stripeCreatePaymentMethod: $hasCreatePaymentMethod');
-      debugPrint('  - stripeConfirmPayment: $hasConfirmPayment');
-      debugPrint('  - Stripe (SDK): $hasStripe');
-    }
-
-    return hasHelper || hasInitialize || hasCreatePaymentMethod || hasConfirmPayment;
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint('[isStripeHelperAvailable] Error verificando: $e');
-    }
-    return false;
+  // Las funciones están definidas con @JS, lo que significa que están disponibles
+  // globalmente en JavaScript. Si el script no está cargado, las funciones
+  // fallarán cuando se intenten llamar, pero no podemos verificar su existencia
+  // de forma confiable sin usar APIs que no están disponibles en dart:js_interop.
+  //
+  // La mejor estrategia es simplemente intentar usarlas y manejar el error
+  // si no están disponibles. Por ahora, retornamos true si estamos en web,
+  // y dejamos que el código de inicialización maneje los errores.
+  if (kDebugMode) {
+    debugPrint(
+      '[isStripeHelperAvailable] Asumiendo que las funciones están disponibles (verificación fallida)',
+    );
   }
+  return true;
 }
 
 // Wrapper functions para jsify y dartify
