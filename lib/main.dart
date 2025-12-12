@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +29,13 @@ void main() async {
 
   try {
     // Cargar desde 'env' (asset) - funciona en todas las plataformas
-    await dotenv.load(fileName: "env");
+    // Agregar timeout para evitar bloqueos indefinidos
+    await dotenv.load(fileName: "env").timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        throw TimeoutException('Timeout cargando archivo env');
+      },
+    );
     envLoaded = true;
     if (kDebugMode) {
       debugPrint('✅ Variables de entorno cargadas exitosamente desde env');
@@ -52,7 +60,14 @@ void main() async {
     try {
       // Verificar si Firebase ya está inicializado antes de intentar inicializarlo
       if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp(options: await DefaultFirebaseOptions.currentPlatform);
+        await Firebase.initializeApp(
+          options: await DefaultFirebaseOptions.currentPlatform,
+        ).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            throw TimeoutException('Timeout inicializando Firebase');
+          },
+        );
         debugPrint('✅ Firebase inicializado');
       } else {
         debugPrint('✅ Firebase ya estaba inicializado (hot restart)');
@@ -76,7 +91,12 @@ void main() async {
   // Initialize Supabase solo si las variables de entorno están cargadas
   if (envLoaded) {
     try {
-      await SupabaseService().initialize();
+      await SupabaseService().initialize().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('Timeout inicializando Supabase');
+        },
+      );
       debugPrint('✅ Supabase inicializado');
     } catch (e, stackTrace) {
       // Convertir excepción a string de forma segura para Flutter Web
