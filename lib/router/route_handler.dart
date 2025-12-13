@@ -10,9 +10,35 @@ import '../screens/welcome/welcome/menus/contacts_screen.dart';
 import '../screens/welcome/booking/stripe_return_screen.dart';
 import '../screens/admin/admin_home_screen.dart';
 
+// Importación condicional para leer hash en web
+import 'route_handler_stub.dart' if (dart.library.html) 'route_handler_web.dart';
+
 /// Widget que maneja las rutas basándose en la URL actual
-class RouteHandler extends StatelessWidget {
+class RouteHandler extends StatefulWidget {
   const RouteHandler({super.key});
+
+  @override
+  State<RouteHandler> createState() => _RouteHandlerState();
+}
+
+class _RouteHandlerState extends State<RouteHandler> {
+  @override
+  void initState() {
+    super.initState();
+    // En web, escuchar cambios en el hash para detectar rutas como #/admin
+    if (kIsWeb) {
+      // Verificar el hash después de que el frame se complete
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkHashAndRebuild();
+      });
+    }
+  }
+
+  void _checkHashAndRebuild() {
+    if (!mounted) return;
+    // Forzar reconstrucción para verificar el hash actualizado
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +57,25 @@ class RouteHandler extends StatelessWidget {
 
         // También verificar el fragmento (hash) de la URL para rutas como /#/welcome
         // En GitHub Pages, las rutas se convierten a hash: /admin -> #/admin
-        final fragment = Uri.base.fragment;
+        // IMPORTANTE: En GitHub Pages, cuando accedes a /admin, se redirige a index.html#/admin
+        // Necesitamos verificar tanto el fragmento como la URL completa
+        String fragment = Uri.base.fragment;
+
+        // Si el fragmento está vacío, intentar leerlo de window.location.hash usando JS interop
+        if (fragment.isEmpty && kIsWeb) {
+          try {
+            // Usar función helper para leer el hash directamente (solo en web)
+            fragment = getHashFromWindow();
+            if (kDebugMode && fragment.isNotEmpty) {
+              debugPrint('[RouteHandler] Hash obtenido de window.location: $fragment');
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              debugPrint('[RouteHandler] Error obteniendo hash: $e');
+            }
+          }
+        }
+
         // Obtener la URL completa para verificar el hash
         final fullUri = Uri.base.toString();
 
