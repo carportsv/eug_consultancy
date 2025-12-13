@@ -151,7 +151,7 @@ window.firebaseAuthSignInWithGoogle = async function(firebaseConfig) {
     }
     
     // Retornar el resultado con los tokens
-    // Envolver explícitamente en Promise.resolve() para asegurar compatibilidad con Dart
+    // Las funciones async ya retornan Promises automáticamente, no necesitamos Promise.resolve()
     const resultData = {
       user: {
         uid: result.user.uid,
@@ -165,12 +165,12 @@ window.firebaseAuthSignInWithGoogle = async function(firebaseConfig) {
       }
     };
     
-    // Retornar como Promise explícita para compatibilidad con js_interop
-    return Promise.resolve(resultData);
+    // Retornar directamente - la función async ya retorna una Promise
+    return resultData;
   } catch (error) {
     console.error('[firebaseAuthSignInWithGoogle] Error:', error);
-    // Asegurar que los errores también se retornen como Promise rechazada
-    return Promise.reject(error);
+    // Lanzar el error - las funciones async automáticamente lo convierten en Promise rechazada
+    throw error;
   }
 };
 
