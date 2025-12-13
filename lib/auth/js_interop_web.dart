@@ -1,6 +1,7 @@
 // Archivo solo para web - contiene la función JS interop
 import 'dart:async';
 import 'dart:js_interop';
+import 'package:flutter/foundation.dart';
 
 // Función helper para verificar si un objeto es una Promise
 bool _isPromise(dynamic obj) {
@@ -8,7 +9,7 @@ bool _isPromise(dynamic obj) {
   try {
     // Para js_interop, intentar acceder a then de múltiples formas
     dynamic thenMethod;
-    
+
     // Intentar acceder a then directamente
     try {
       thenMethod = obj.then;
@@ -20,9 +21,9 @@ bool _isPromise(dynamic obj) {
         return false;
       }
     }
-    
+
     if (thenMethod == null) return false;
-    
+
     // Verificar que then sea callable (puede ser Function, JSFunction, etc.)
     // En js_interop, puede ser cualquier objeto callable
     return true; // Si tiene then, asumimos que es una Promise
@@ -47,19 +48,23 @@ extension JSPromiseExtension<T extends JSAny?> on JSPromise<T> {
     try {
       // Intentar como dynamic primero para mayor compatibilidad
       promiseObj = this as dynamic;
-      
-      // Si es JSPromise, intentar usarlo directamente sin verificar
+
       // js_interop garantiza que JSPromise es una Promise válida
-      if (this is JSPromise) {
-        // Continuar con la conversión
-      } else if (!_isPromise(promiseObj)) {
-        // Si no es JSPromise y no pasa la verificación, intentar de todas formas
+      // Intentar verificar, pero si falla, continuar de todas formas
+      if (!_isPromise(promiseObj)) {
+        // Si no pasa la verificación, intentar de todas formas
         // porque puede ser una Promise que no se reconoce correctamente
-        debugPrint('[JSPromiseExtension] Advertencia: Objeto no reconocido como Promise, intentando de todas formas');
+        if (kDebugMode) {
+          debugPrint(
+            '[JSPromiseExtension] Advertencia: Objeto no reconocido como Promise, intentando de todas formas',
+          );
+        }
       }
     } catch (e) {
       // Si hay error, intentar de todas formas llamando then
-      debugPrint('[JSPromiseExtension] Error al verificar Promise: $e, intentando de todas formas');
+      if (kDebugMode) {
+        debugPrint('[JSPromiseExtension] Error al verificar Promise: $e, intentando de todas formas');
+      }
       promiseObj = this as dynamic;
     }
 
