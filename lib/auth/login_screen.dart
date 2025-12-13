@@ -31,6 +31,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   bool _isLoading = false;
+  bool _isSigningIn = false; // Guard para prevenir popup duplicado
   final UserService _userService = UserService();
   StreamSubscription<User?>? _authSubscription;
   late AnimationController _pulseController;
@@ -171,7 +172,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     // Escuchar cambios de autenticación para navegar cuando el usuario se autentique
     // Esto es especialmente importante después de logout/login cuando LoginScreen está directamente en el stack
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) async {
-      if (user != null && mounted && !_isLoading) {
+      // Prevenir navegación duplicada si ya estamos procesando el login
+      if (user != null && mounted && !_isLoading && !_isSigningIn) {
         if (kDebugMode) {
           debugPrint(
             '[LoginScreen] ✅ Usuario autenticado (${user.uid}), navegando a RoutingScreen',
@@ -200,7 +202,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   Future<void> _signInWithGoogle() async {
-    if (_isLoading) return;
+    // Prevenir múltiples llamadas simultáneas
+    if (_isLoading || _isSigningIn) {
+      debugPrint('[LoginScreen] ⚠️ Sign-in ya en progreso, ignorando llamada duplicada');
+      return;
+    }
+    _isSigningIn = true;
     setState(() => _isLoading = true);
 
     try {
@@ -274,6 +281,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
           // Si el error es de popup bloqueado, mostrar mensaje claro y no intentar fallback
           if (errorMessage.contains('POPUP_BLOCKED') || errorMessage.contains('popup')) {
+            _isSigningIn = false;
             if (mounted) {
               setState(() => _isLoading = false);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -304,6 +312,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           final googleUser = await googleSignIn.signIn();
           if (googleUser == null) {
             debugPrint('[LoginScreen] Usuario canceló el inicio de sesión');
+            _isSigningIn = false;
             if (mounted) setState(() => _isLoading = false);
             return;
           }
@@ -384,6 +393,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         final googleUser = await googleSignIn.signIn();
         if (googleUser == null) {
           debugPrint('[LoginScreen] Usuario canceló el inicio de sesión');
+          _isSigningIn = false;
           if (mounted) setState(() => _isLoading = false);
           return;
         }
@@ -441,12 +451,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       // El listener de authStateChanges() también navegará como respaldo
       if (mounted) {
         debugPrint('[LoginScreen] ✅ Autenticación completada, navegando a RoutingScreen');
+        _isSigningIn = false;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const RoutingScreen()),
           (route) => false,
         );
       }
     } catch (e, stackTrace) {
+      _isSigningIn = false;
       final errorMessage = e.toString();
       final stackTraceMessage = stackTrace.toString();
       debugPrint('[LoginScreen] ❌ ERROR: $errorMessage');
@@ -462,6 +474,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         );
       }
     } finally {
+      _isSigningIn = false;
       if (mounted) {
         setState(() => _isLoading = false);
       }

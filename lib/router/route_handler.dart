@@ -121,28 +121,39 @@ class _RouteHandlerState extends State<RouteHandler> {
 
         // CRÍTICO: Verificar /admin PRIMERO, antes de cualquier otra verificación
         // Esto es especialmente importante en GitHub Pages donde /admin se convierte a #/admin
+        // Verificar múltiples formatos posibles de /admin
         final hasAdminInUrl =
             fullUri.contains('/admin') ||
             fullUri.contains('#/admin') ||
             fullUri.contains('index.html#/admin') ||
+            fullUri.contains('/eug_consultancy/admin') ||
+            fullUri.contains('/eug_consultancy#/admin') ||
             fullUri.contains('admin');
         final isAdminPath =
             normalizedPath.endsWith('/admin') ||
             normalizedPath == '/admin' ||
-            normalizedPath.contains('/admin/');
+            normalizedPath.contains('/admin/') ||
+            path.endsWith('/admin') ||
+            path.contains('/admin/') ||
+            path == '/eug_consultancy/admin';
         final isAdminFragment =
             normalizedFragment == '/admin' ||
             normalizedFragment == '/admin/' ||
             normalizedFragment.contains('/admin') ||
             cleanFragment == '/admin' ||
             cleanFragment.startsWith('/admin') ||
+            cleanFragment.contains('/admin') ||
             fragment == 'admin' ||
             fragment == '/admin' ||
             fragment.startsWith('/admin') ||
             fragment.startsWith('admin') ||
-            fragment.contains('/admin');
+            fragment.contains('/admin') ||
+            fragment.contains('#/admin');
 
-        if (isAdminPath || isAdminFragment || hasAdminInUrl) {
+        // Verificar también si el path completo contiene /admin (para casos como /eug_consultancy/admin)
+        final pathContainsAdmin = (path.contains('/admin') && !path.contains('/admin/')) || path.endsWith('/admin');
+
+        if (isAdminPath || isAdminFragment || hasAdminInUrl || pathContainsAdmin) {
           if (kDebugMode) {
             debugPrint(
               '[RouteHandler] ✅ Admin route detected FIRST, checking authentication and role...',
