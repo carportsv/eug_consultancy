@@ -114,7 +114,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         debugPrint('[LoginScreen] ✅ Redirect iniciado, la página se recargará');
         // El redirect ya se inició, la página se recargará automáticamente
         // No necesitamos hacer nada más aquí
-        throw Exception('REDIRECT_INICIADO: La autenticación se completará después de la redirección.');
+        throw Exception(
+          'REDIRECT_INICIADO: La autenticación se completará después de la redirección.',
+        );
       }
 
       final credentialData = resultMap['credential'] as Map?;
@@ -177,12 +179,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       begin: 0.85,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
-    
-    // En web, verificar si hay resultado de redirect cuando la página se carga
-    if (kIsWeb) {
-      _checkRedirectResult();
-    }
-    
+
     // Escuchar cambios de autenticación para navegar cuando el usuario se autentique
     // Esto es especialmente importante después de logout/login cuando LoginScreen está directamente en el stack
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) async {
@@ -206,66 +203,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         });
       }
     });
-  }
-  
-  // Verificar si hay resultado de redirect cuando la página se carga
-  Future<void> _checkRedirectResult() async {
-    if (!kIsWeb) return;
-    
-    try {
-      // Obtener configuración de Firebase
-      final firebaseOptions = await DefaultFirebaseOptions.currentPlatform;
-      final firebaseConfig = <String, String>{
-        'apiKey': firebaseOptions.apiKey,
-        'authDomain': firebaseOptions.authDomain ?? '',
-        'projectId': firebaseOptions.projectId,
-        if (firebaseOptions.storageBucket != null)
-          'storageBucket': firebaseOptions.storageBucket!,
-        'messagingSenderId': firebaseOptions.messagingSenderId,
-        'appId': firebaseOptions.appId,
-      };
-      
-      // Llamar a la función JavaScript para obtener el resultado del redirect
-      final jsConfig = jsify(firebaseConfig);
-      final jsPromise = firebaseAuthGetRedirectResultJS(jsConfig);
-      
-      // Convertir JSPromise a Future
-      final jsResult = await jsPromise.toDart;
-      
-      if (jsResult == null) {
-        // No hay resultado del redirect
-        return;
-      }
-      
-      // Extraer los datos del resultado
-      final resultMap = dartify(jsResult as dynamic);
-      if (resultMap is! Map) {
-        return;
-      }
-      
-      final credentialData = resultMap['credential'] as Map?;
-      final idToken = credentialData?['idToken'] as String?;
-      final accessToken = credentialData?['accessToken'] as String?;
-      
-      if (idToken == null || idToken.isEmpty) {
-        return;
-      }
-      
-      // Autenticar con Firebase usando los tokens del redirect
-      debugPrint('[LoginScreen] ✅ Resultado de redirect encontrado, autenticando...');
-      final credential = GoogleAuthProvider.credential(
-        accessToken: accessToken?.isNotEmpty == true ? accessToken : null,
-        idToken: idToken,
-      );
-      
-      await FirebaseAuth.instance.signInWithCredential(credential);
-      debugPrint('[LoginScreen] ✅ Autenticado con resultado de redirect');
-      
-      // La navegación se manejará automáticamente por el authStateChanges listener
-    } catch (e) {
-      // Si hay error, simplemente continuar (puede que no haya resultado de redirect)
-      debugPrint('[LoginScreen] No hay resultado de redirect o error al procesarlo: $e');
-    }
   }
 
   @override
@@ -330,17 +267,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
           // Llamar a la función JavaScript usando js_interop
           final tokens = await _firebaseAuthSignInWithGoogleWeb(firebaseConfig);
-          
-          final idToken = tokens['idToken'] as String?;
+          final idToken = tokens['idToken'] as String;
           final accessToken = tokens['accessToken'] as String?;
-          
-          // Si no hay tokens, puede ser que se usó redirect
-          if (idToken == null || idToken.isEmpty) {
-            debugPrint('[LoginScreen] ⚠️ No hay tokens, puede ser que se usó redirect');
-            _isSigningIn = false;
-            if (mounted) setState(() => _isLoading = false);
-            return;
-          }
 
           debugPrint('[LoginScreen] ✅ Tokens obtenidos de Firebase Auth JS');
           debugPrint('[LoginScreen] idToken: ${idToken.isNotEmpty ? "✅ Disponible" : "❌ Vacío"}');
@@ -371,9 +299,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text(
-                    'Redirigiendo a Google para autenticación...',
-                  ),
+                  content: Text('Redirigiendo a Google para autenticación...'),
                   backgroundColor: Colors.blue,
                   duration: Duration(seconds: 3),
                 ),
@@ -381,7 +307,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             }
             return;
           }
-          
+
           // Si el error es de popup bloqueado, el código JS ya intentó usar redirect
           // Si llegamos aquí, significa que el redirect también falló
           if (errorMessage.contains('POPUP_BLOCKED') || errorMessage.contains('popup')) {

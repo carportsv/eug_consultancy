@@ -93,9 +93,6 @@ extension JSPromiseExtension<T extends JSAny?> on JSPromise<T> {
 @JS('firebaseAuthSignInWithGoogle')
 external JSPromise<JSObject?> firebaseAuthSignInWithGoogleJS(JSObject config);
 
-// Función para obtener el resultado del redirect cuando la página se recarga
-@JS('firebaseAuthGetRedirectResult')
-external JSPromise<JSObject?> firebaseAuthGetRedirectResultJS(JSObject config);
 
 // Función alternativa para verificar si la función JS está disponible
 @JS('window')
