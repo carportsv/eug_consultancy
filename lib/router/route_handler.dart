@@ -7,6 +7,8 @@ import '../screens/welcome/welcome/welcome_screen.dart';
 import '../screens/welcome/welcome/menus/company_screen.dart';
 import '../screens/welcome/welcome/menus/destinations_screen.dart';
 import '../screens/welcome/welcome/menus/contacts_screen.dart';
+import '../screens/welcome/booking/stripe_return_screen.dart';
+import '../screens/admin/admin_home_screen.dart';
 
 /// Widget que maneja las rutas basándose en la URL actual
 class RouteHandler extends StatelessWidget {
@@ -39,9 +41,15 @@ class RouteHandler extends StatelessWidget {
         }
 
         // Normalizar el path removiendo el base-href si está presente
+        // Soporta tanto /fzkt_openstreet como /eug_consultancy para compatibilidad
         String normalizedPath = path;
         if (path.startsWith('/fzkt_openstreet')) {
           normalizedPath = path.replaceFirst('/fzkt_openstreet', '');
+          if (normalizedPath.isEmpty) {
+            normalizedPath = '/';
+          }
+        } else if (path.startsWith('/eug_consultancy')) {
+          normalizedPath = path.replaceFirst('/eug_consultancy', '');
           if (normalizedPath.isEmpty) {
             normalizedPath = '/';
           }
@@ -189,46 +197,97 @@ class RouteHandler extends StatelessWidget {
           return const ContactsScreen();
         }
 
-        // CRÍTICO: Verificar autenticación ANTES de mostrar WelcomeScreen
-        // Si el usuario está autenticado, debe ir a su pantalla según su rol, no a Welcome
-        final currentUser = FirebaseAuth.instance.currentUser;
-        final isAuthenticated = currentUser != null;
+        // Manejar retorno de Stripe Checkout
+        final hasPaymentSuccessInUrl =
+            fullUri.contains('/payment/success') || normalizedPath.contains('/payment/success');
+        final hasPaymentCancelInUrl =
+            fullUri.contains('/payment/cancel') || normalizedPath.contains('/payment/cancel');
 
-        if (kDebugMode) {
-          debugPrint('[RouteHandler] Usuario autenticado: $isAuthenticated');
-          if (isAuthenticated) {
-            debugPrint('[RouteHandler] UID del usuario: ${currentUser.uid}');
-          }
-        }
-
-        // Si el usuario está autenticado, NO mostrar WelcomeScreen, ir a AuthGate para verificar rol
-        if (isAuthenticated) {
+        if (hasPaymentSuccessInUrl || hasPaymentCancelInUrl) {
           if (kDebugMode) {
             debugPrint(
-              '[RouteHandler] Usuario autenticado detectado, redirigiendo a AuthGate para verificar rol',
+              '[RouteHandler] Stripe Checkout return detected: ${hasPaymentSuccessInUrl ? "success" : "cancel"}',
             );
           }
-          return const AuthGate();
+          // Importar dinámicamente para evitar dependencias circulares
+          return StripeReturnScreen(isSuccess: hasPaymentSuccessInUrl);
         }
 
-        // Mostrar WelcomeScreen SOLO si NO está autenticado y es /welcome
-        if (isWelcomePath || isWelcomeFragment || hasWelcomeInUrl) {
+        // Verificar si es la ruta de admin (/admin)
+        // Soporta tanto path directo (/admin) como hash routing (#/admin) para GitHub Pages
+        final hasAdminInUrl =
+            fullUri.contains('/admin') || fullUri.contains('#/admin') || fullUri.contains('admin');
+        final isAdminPath =
+            normalizedPath.endsWith('/admin') ||
+            normalizedPath == '/admin' ||
+            normalizedPath.contains('/admin/');
+        final isAdminFragment =
+            normalizedFragment == '/admin' ||
+            normalizedFragment == '/admin/' ||
+            normalizedFragment.contains('/admin') ||
+            fragment == 'admin' ||
+            fragment == '/admin' ||
+            fragment.startsWith('/admin') ||
+            fragment.startsWith('admin');
+
+        if (isAdminPath || isAdminFragment || hasAdminInUrl) {
           if (kDebugMode) {
-            debugPrint('[RouteHandler] Showing WelcomeScreen (public for users, no auth)');
+            debugPrint('[RouteHandler] Admin route detected, checking authentication and role...');
+            debugPrint('[RouteHandler] Admin - Path: $normalizedPath, Fragment: $fragment');
+          }
+          // Verificar autenticación y rol para admin
+          return _AdminRouteHandler();
+        }
+
+        // Verificar si es la ruta de user (/user) - alias de /welcome
+        // Soporta tanto path directo (/user) como hash routing (#/user) para GitHub Pages
+        final hasUserInUrl =
+            fullUri.contains('/user') || fullUri.contains('#/user') || fullUri.contains('user');
+        final isUserPath =
+            normalizedPath.endsWith('/user') ||
+            normalizedPath == '/user' ||
+            normalizedPath.contains('/user/');
+        final isUserFragment =
+            normalizedFragment == '/user' ||
+            normalizedFragment == '/user/' ||
+            normalizedFragment.contains('/user') ||
+            fragment == 'user' ||
+            fragment == '/user' ||
+            fragment.startsWith('/user') ||
+            fragment.startsWith('user');
+
+        if (isUserPath || isUserFragment || hasUserInUrl) {
+          if (kDebugMode) {
+            debugPrint('[RouteHandler] User route detected (/user), showing WelcomeScreen');
+            debugPrint('[RouteHandler] User - Path: $normalizedPath, Fragment: $fragment');
+          }
+          // /user es un alias de /welcome, mostrar WelcomeScreen directamente
+          return const WelcomeScreen();
+        }
+
+        // La ruta raíz (/) siempre muestra WelcomeScreen (user normal)
+        // /admin tiene su propio handler que verifica autenticación y rol
+        if (isRootPath) {
+          if (kDebugMode) {
+            debugPrint('[RouteHandler] Root path (/) - Showing WelcomeScreen (user normal)');
           }
           return const WelcomeScreen();
         }
 
-        // Para la ruta raíz (/) o cualquier otra ruta, mostrar AuthGate
-        // Esto redirige a Admin si es admin, o a login si no está autenticado
-        if (kDebugMode) {
-          if (isRootPath) {
-            debugPrint('[RouteHandler] Root path (/) - Showing AuthGate (will redirect to Admin)');
-          } else {
-            debugPrint('[RouteHandler] Other path - Showing AuthGate');
+        // Mostrar WelcomeScreen si es /welcome
+        if (isWelcomePath || isWelcomeFragment || hasWelcomeInUrl) {
+          if (kDebugMode) {
+            debugPrint('[RouteHandler] Showing WelcomeScreen (public for users)');
           }
+          return const WelcomeScreen();
         }
-        return const AuthGate();
+
+        // Para cualquier otra ruta no reconocida, mostrar WelcomeScreen como fallback
+        // (en lugar de AuthGate, ya que la raíz es para users normales)
+        if (kDebugMode) {
+          debugPrint('[RouteHandler] Unknown path - Showing WelcomeScreen (fallback)');
+        }
+        return const WelcomeScreen();
       } catch (e) {
         // Si hay un error al procesar la URL (como SecurityError),
         // mostrar AuthGate como fallback
@@ -351,5 +410,175 @@ class _MobileRouteHandlerState extends State<_MobileRouteHandler> {
 
     // Retornar la ruta determinada
     return _initialRoute ?? const WelcomeScreen();
+  }
+}
+
+/// Widget que maneja la ruta /admin verificando autenticación y rol
+class _AdminRouteHandler extends StatefulWidget {
+  const _AdminRouteHandler();
+
+  @override
+  State<_AdminRouteHandler> createState() => _AdminRouteHandlerState();
+}
+
+class _AdminRouteHandlerState extends State<_AdminRouteHandler> {
+  final UserService _userService = UserService();
+  bool _isChecking = true;
+  Widget? _route;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdminAccess();
+  }
+
+  Future<void> _checkAdminAccess() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        // No hay usuario autenticado → mostrar login
+        if (mounted) {
+          setState(() {
+            _route = const AuthGate();
+            _isChecking = false;
+          });
+        }
+        if (kDebugMode) {
+          debugPrint('[AdminRouteHandler] No hay usuario autenticado → AuthGate');
+        }
+        return;
+      }
+
+      // Hay usuario autenticado → verificar si es admin
+      try {
+        final role = await _userService
+            .getUserRole(user.uid)
+            .timeout(
+              const Duration(seconds: 3),
+              onTimeout: () {
+                if (kDebugMode) {
+                  debugPrint('[AdminRouteHandler] Timeout obteniendo rol, denegando acceso');
+                }
+                return 'user';
+              },
+            );
+
+        if (mounted) {
+          setState(() {
+            if (role == 'admin') {
+              // Es admin → mostrar AdminHomeScreen
+              _route = const AdminHomeScreen();
+              if (kDebugMode) {
+                debugPrint('[AdminRouteHandler] Usuario es admin → AdminHomeScreen');
+              }
+            } else {
+              // No es admin → mostrar mensaje de acceso denegado
+              _route = _AccessDeniedScreen();
+              if (kDebugMode) {
+                debugPrint(
+                  '[AdminRouteHandler] Usuario no es admin (rol: $role) → Acceso denegado',
+                );
+              }
+            }
+            _isChecking = false;
+          });
+        }
+      } catch (e) {
+        // Error obteniendo rol → denegar acceso
+        if (mounted) {
+          setState(() {
+            _route = _AccessDeniedScreen();
+            _isChecking = false;
+          });
+        }
+        if (kDebugMode) {
+          debugPrint('[AdminRouteHandler] Error obteniendo rol: $e → Acceso denegado');
+        }
+      }
+    } catch (e) {
+      // Error general → mostrar mensaje de error
+      if (mounted) {
+        setState(() {
+          _route = _AccessDeniedScreen();
+          _isChecking = false;
+        });
+      }
+      if (kDebugMode) {
+        debugPrint('[AdminRouteHandler] Error general: $e → Acceso denegado');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isChecking) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Verificando acceso...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return _route ?? const AuthGate();
+  }
+}
+
+/// Pantalla que muestra mensaje de acceso denegado para /admin
+class _AccessDeniedScreen extends StatelessWidget {
+  const _AccessDeniedScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Acceso Denegado'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.block, size: 64, color: Colors.red),
+              const SizedBox(height: 24),
+              const Text(
+                'Acceso Denegado',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No tienes permisos para acceder al panel de administración.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () {
+                  // Redirigir a WelcomeScreen
+                  Navigator.of(
+                    context,
+                  ).pushReplacement(MaterialPageRoute(builder: (context) => const WelcomeScreen()));
+                },
+                icon: const Icon(Icons.home),
+                label: const Text('Ir a Inicio'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

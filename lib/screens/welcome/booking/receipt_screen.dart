@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/pdf_receipt_service.dart';
 import '../../../shared/widgets/whatsapp_floating_button.dart';
+import '../welcome/welcome_screen.dart';
 
 // Constants
 const _kPrimaryColor = Color(0xFF1D4ED8);
@@ -398,7 +399,12 @@ class ReceiptScreen extends StatelessWidget {
             ),
             child: Icon(Icons.close, color: _kTextColor),
           ),
-          onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+          onPressed: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+              (route) => false,
+            );
+          },
         ),
         title: Text(
           'Recibo de Pago',
@@ -586,7 +592,10 @@ class ReceiptScreen extends StatelessWidget {
                   flex: 2,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                        (route) => false,
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kPrimaryColor,
