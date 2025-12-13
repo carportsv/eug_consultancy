@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../auth/supabase_service.dart';
 import 'stripe_config.dart';
 
@@ -29,6 +32,23 @@ class PaymentIntentResult {
       amount: data['amount'] as int,
       currency: data['currency'] as String? ?? 'usd',
       status: data['status'] as String? ?? 'pending',
+    );
+  }
+}
+
+/// Resultado de una Checkout Session
+class CheckoutSessionResult {
+  final String sessionId;
+  final String checkoutUrl;
+  final String? paymentIntentId;
+
+  CheckoutSessionResult({required this.sessionId, required this.checkoutUrl, this.paymentIntentId});
+
+  factory CheckoutSessionResult.fromMap(Map<String, dynamic> data) {
+    return CheckoutSessionResult(
+      sessionId: data['session_id'] as String,
+      checkoutUrl: data['checkout_url'] as String,
+      paymentIntentId: data['payment_intent_id'] as String?,
     );
   }
 }
@@ -67,19 +87,7 @@ class StripeService {
         debugPrint('[StripeService] 💳 Inicializando Payment Sheet...');
       }
 
-      // 1. Verificar que Stripe esté inicializado
-      if (Stripe.publishableKey.isEmpty) {
-        if (kDebugMode) {
-          debugPrint('[StripeService] ❌ Stripe no está inicializado. Clave pública vacía.');
-        }
-        return {
-          'success': false,
-          'status': 'failed',
-          'error': 'Stripe no está configurado correctamente. Contacta al soporte.',
-        };
-      }
-
-      // 2. Detectar plataforma y usar el método apropiado
+      // 1. Detectar plataforma y usar el método apropiado
       if (kIsWeb) {
         // En web, usar confirmPayment directamente con datos de tarjeta
         if (kDebugMode) {
@@ -102,6 +110,18 @@ class StripeService {
         try {
           // 1. Verificar y obtener la clave pública
           final publishableKey = StripeConfig.publishableKey;
+          if (kDebugMode) {
+            debugPrint(
+              '[StripeService] 🔑 Clave pública de Stripe: ${publishableKey.substring(0, publishableKey.length > 20 ? 20 : publishableKey.length)}... (longitud: ${publishableKey.length})',
+            );
+            // Log completo de la clave para debugging (solo en desarrollo)
+            if (publishableKey.length < 100) {
+              debugPrint(
+                '[StripeService] ⚠️ ADVERTENCIA: La clave parece estar truncada. Longitud esperada: ~100+ caracteres',
+              );
+              debugPrint('[StripeService] 🔍 Clave completa: $publishableKey');
+            }
+          }
           if (publishableKey.isEmpty) {
             if (kDebugMode) {
               debugPrint('[StripeService] ❌ Stripe publishable key vacía');
@@ -113,13 +133,54 @@ class StripeService {
             };
           }
 
+          // Verificar que la clave tenga el formato correcto
+          if (!publishableKey.startsWith('pk_test_') && !publishableKey.startsWith('pk_live_')) {
+            if (kDebugMode) {
+              debugPrint(
+                '[StripeService] ❌ Formato de clave inválido. Debe comenzar con pk_test_ o pk_live_',
+              );
+            }
+            return {
+              'success': false,
+              'status': 'failed',
+              'error': 'Clave de API de Stripe con formato inválido. Contacta al soporte técnico.',
+            };
+          }
+
           // 2. Inicializar Stripe directamente (esto es idempotente, puede llamarse múltiples veces)
           // Si las funciones no están disponibles, el error será capturado más abajo
           try {
-            final initResult = stripeInitializeJS(publishableKey);
-            await initResult.toDart;
+            // Limpiar la clave de espacios en blanco
+            final cleanKey = publishableKey.trim();
             if (kDebugMode) {
-              debugPrint('[StripeService] ✅ Stripe inicializado en web');
+              debugPrint(
+                '[StripeService] 🔑 Clave limpia (sin espacios): ${cleanKey.substring(0, cleanKey.length > 20 ? 20 : cleanKey.length)}... (longitud: ${cleanKey.length})',
+              );
+            }
+
+            // Inicializar Stripe de forma asíncrona sin bloquear
+            // Usar unawaited para evitar que bloquee el hot restart
+            // El resultado es un bool, no necesitamos manejarlo
+            unawaited(
+              stripeInitializeJS(cleanKey).toDart
+                  .then((result) {
+                    if (kDebugMode) {
+                      debugPrint(
+                        '[StripeService] ✅ Stripe inicializado en web (resultado: $result)',
+                      );
+                    }
+                  })
+                  .catchError((e) {
+                    if (kDebugMode) {
+                      debugPrint(
+                        '[StripeService] ⚠️ Error en inicialización asíncrona de Stripe: $e',
+                      );
+                    }
+                  }),
+            );
+
+            if (kDebugMode) {
+              debugPrint('[StripeService] ⏳ Inicializando Stripe en segundo plano...');
             }
           } catch (e) {
             if (kDebugMode) {
@@ -131,9 +192,29 @@ class StripeService {
             // Continuar aunque falle la inicialización (puede que ya esté inicializado)
           }
 
-          // 2. Crear Payment Method con los datos de tarjeta
+          // 2. Confirmar Payment Intent directamente con datos de tarjeta
+          // Esto evita el error "Please use Stripe Elements" al usar confirmCardPayment
+          // con payment_method_data directamente
           if (kDebugMode) {
-            debugPrint('[StripeService] 💳 Creando Payment Method en web...');
+            debugPrint(
+              '[StripeService] 💳 Confirmando Payment Intent directamente con datos de tarjeta...',
+            );
+          }
+
+          // Obtener URL y API key de Supabase para llamar al backend
+          // Obtener desde las variables de entorno (mismo método que usa SupabaseService)
+          final supabaseUrl = dotenv.env['EXPO_PUBLIC_SUPABASE_URL'] ?? '';
+          final supabaseAnonKey = dotenv.env['EXPO_PUBLIC_SUPABASE_ANON_KEY'] ?? '';
+
+          if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+            if (kDebugMode) {
+              debugPrint('[StripeService] ❌ Supabase URL o API key no encontrados');
+            }
+            return {
+              'success': false,
+              'status': 'failed',
+              'error': 'Error de configuración. Contacta al soporte técnico.',
+            };
           }
 
           final cardDataMap = <String, dynamic>{
@@ -145,39 +226,83 @@ class StripeService {
           };
           final cardData = jsify(cardDataMap);
 
-          final paymentMethodPromise = stripeCreatePaymentMethodJS(cardData);
-          final paymentMethodResult = await paymentMethodPromise.toDart;
-          final paymentMethodData = paymentMethodResult != null
-              ? dartify(paymentMethodResult) as Map<String, dynamic>?
-              : null;
-
-          if (paymentMethodData == null || paymentMethodData['id'] == null) {
+          Map<String, dynamic>? confirmData;
+          try {
             if (kDebugMode) {
-              debugPrint('[StripeService] ❌ No se pudo crear Payment Method');
+              debugPrint(
+                '[StripeService] 📤 Creando Payment Method en backend y confirmando Payment Intent...',
+              );
             }
-            return {
-              'success': false,
-              'status': 'failed',
-              'error':
-                  'Error al procesar los datos de la tarjeta. Verifica la información e intenta nuevamente.',
-            };
-          }
+            final confirmPromise = stripeConfirmPaymentWithCardDataJS(
+              clientSecret,
+              cardData,
+              supabaseUrl,
+              supabaseAnonKey,
+            );
+            final confirmResult = await confirmPromise.toDart;
+            confirmData = confirmResult != null
+                ? dartify(confirmResult) as Map<String, dynamic>?
+                : null;
+          } catch (e) {
+            if (kDebugMode) {
+              debugPrint('[StripeService] ❌ Error confirmando Payment Intent: $e');
+            }
 
-          final paymentMethodId = paymentMethodData['id'] as String;
-          if (kDebugMode) {
-            debugPrint('[StripeService] ✅ Payment Method creado: $paymentMethodId');
-          }
+            String errorMessage =
+                'Error al procesar los datos de la tarjeta. Verifica la información e intenta nuevamente.';
+            final errorString = e.toString();
 
-          // 3. Confirmar Payment Intent con el Payment Method
-          if (kDebugMode) {
-            debugPrint('[StripeService] 💳 Confirmando Payment Intent en web...');
-          }
+            // Intentar extraer código de error desde el objeto JS
+            try {
+              // Detectar errores específicos de Stripe
+              if (errorString.contains('Invalid API Key') ||
+                  errorString.contains('invalid_request_error')) {
+                // Si el error menciona Elements, es porque Stripe requiere Elements
+                if (errorString.contains('Elements') || errorString.contains('Stripe Elements')) {
+                  errorMessage =
+                      'Stripe requiere usar Stripe Elements para recopilar datos de tarjeta de forma segura. Contacta al soporte técnico.';
+                } else {
+                  errorMessage = 'Clave de API de Stripe inválida. Contacta al soporte técnico.';
+                }
+              } else if (errorString.contains('code:') || errorString.contains('"code"')) {
+                // Si el error viene como objeto JS con código
+                final codeMatch = RegExp(
+                  r'code[:\s]+([a-z_]+)',
+                  caseSensitive: false,
+                ).firstMatch(errorString);
+                if (codeMatch != null) {
+                  final errorCode = codeMatch.group(1);
+                  if (errorCode != null) {
+                    errorMessage = StripeErrorMessages.getErrorMessage(errorCode);
+                    if (kDebugMode) {
+                      debugPrint('[StripeService] 📝 Error code extraído: $errorCode');
+                    }
+                  }
+                }
+              } else {
+                // Fallback a detección por texto
+                if (errorString.contains('invalid_number')) {
+                  errorMessage = StripeErrorMessages.getErrorMessage('invalid_number');
+                } else if (errorString.contains('incorrect_cvc') ||
+                    errorString.contains('cvc') ||
+                    errorString.contains('cvv')) {
+                  errorMessage = StripeErrorMessages.getErrorMessage('incorrect_cvc');
+                } else if (errorString.contains('expired')) {
+                  errorMessage = StripeErrorMessages.getErrorMessage('expired_card');
+                } else if (errorString.contains('Elements') ||
+                    errorString.contains('Stripe Elements')) {
+                  errorMessage =
+                      'Stripe requiere usar Stripe Elements para recopilar datos de tarjeta de forma segura. Contacta al soporte técnico.';
+                }
+              }
+            } catch (parseError) {
+              if (kDebugMode) {
+                debugPrint('[StripeService] ⚠️ Error parseando código de error: $parseError');
+              }
+            }
 
-          final confirmPromise = stripeConfirmPaymentJS(clientSecret, paymentMethodId);
-          final confirmResult = await confirmPromise.toDart;
-          final confirmData = confirmResult != null
-              ? dartify(confirmResult) as Map<String, dynamic>?
-              : null;
+            return {'success': false, 'status': 'failed', 'error': errorMessage};
+          }
 
           if (confirmData == null) {
             if (kDebugMode) {
@@ -195,7 +320,7 @@ class StripeService {
             debugPrint('[StripeService] 📊 Estado del Payment Intent: $paymentStatus');
           }
 
-          // 4. Verificar estado final
+          // 3. Verificar estado final
           if (paymentStatus == 'succeeded') {
             if (kDebugMode) {
               debugPrint('[StripeService] ✅ Pago confirmado exitosamente en web');
@@ -233,22 +358,70 @@ class StripeService {
             debugPrint('[StripeService] 📚 Stack trace: $stackTrace');
           }
 
-          // Intentar extraer información del error
+          // Intentar extraer información del error de Stripe.js
           String errorMessage = 'Error al procesar el pago. Intenta nuevamente.';
-          if (e.toString().contains('card_error') || e.toString().contains('declined')) {
-            errorMessage = 'Tarjeta declinada. Verifica los datos e intenta nuevamente.';
-          } else if (e.toString().contains('expired')) {
-            errorMessage = 'Tarjeta expirada. Usa una tarjeta válida.';
-          } else if (e.toString().contains('cvc') || e.toString().contains('cvv')) {
-            errorMessage = 'CVV incorrecto. Verifica el código de seguridad.';
-          } else if (e.toString().contains('insufficient')) {
-            errorMessage = 'Fondos insuficientes en la tarjeta.';
+
+          // Intentar extraer código de error si viene en el formato de Stripe.js
+          try {
+            final errorString = e.toString();
+            // Si el error viene como objeto con código (desde stripe_helper.js)
+            if (errorString.contains('code:') || errorString.contains('"code"')) {
+              // Intentar extraer el código del error
+              final codeMatch = RegExp(
+                r'code[:\s]+([a-z_]+)',
+                caseSensitive: false,
+              ).firstMatch(errorString);
+              if (codeMatch != null) {
+                final errorCode = codeMatch.group(1);
+                if (errorCode != null) {
+                  errorMessage = StripeErrorMessages.getErrorMessage(errorCode);
+                  if (kDebugMode) {
+                    debugPrint('[StripeService] 📝 Error code extraído: $errorCode');
+                  }
+                }
+              }
+            }
+
+            // Fallback a detección por texto si no se encontró código
+            if (errorMessage == 'Error al procesar el pago. Intenta nuevamente.') {
+              if (errorString.contains('card_error') || errorString.contains('declined')) {
+                errorMessage = StripeErrorMessages.getErrorMessage('card_declined');
+              } else if (errorString.contains('expired')) {
+                errorMessage = StripeErrorMessages.getErrorMessage('expired_card');
+              } else if (errorString.contains('cvc') ||
+                  errorString.contains('cvv') ||
+                  errorString.contains('incorrect_cvc')) {
+                errorMessage = StripeErrorMessages.getErrorMessage('incorrect_cvc');
+              } else if (errorString.contains('insufficient')) {
+                errorMessage = StripeErrorMessages.getErrorMessage('insufficient_funds');
+              } else if (errorString.contains('invalid_number')) {
+                errorMessage = StripeErrorMessages.getErrorMessage('invalid_number');
+              } else if (errorString.contains('processing_error')) {
+                errorMessage = StripeErrorMessages.getErrorMessage('processing_error');
+              }
+            }
+          } catch (parseError) {
+            if (kDebugMode) {
+              debugPrint('[StripeService] ⚠️ Error parseando mensaje de error: $parseError');
+            }
           }
 
           return {'success': false, 'status': 'failed', 'error': errorMessage};
         }
       } else {
         // En móvil, usar Payment Sheet
+        // 1. Verificar que Stripe esté inicializado (solo en móvil)
+        if (Stripe.publishableKey.isEmpty) {
+          if (kDebugMode) {
+            debugPrint('[StripeService] ❌ Stripe no está inicializado. Clave pública vacía.');
+          }
+          return {
+            'success': false,
+            'status': 'failed',
+            'error': 'Stripe no está configurado correctamente. Contacta al soporte.',
+          };
+        }
+
         if (kDebugMode) {
           debugPrint('[StripeService] 📱 Detectado móvil - usando Payment Sheet');
         }
@@ -734,5 +907,134 @@ class StripeService {
   /// Obtener mensaje de error amigable
   static String getErrorMessage(String errorCode) {
     return StripeErrorMessages.getErrorMessage(errorCode);
+  }
+
+  /// Crear una Checkout Session en Stripe
+  ///
+  /// Este método crea una sesión de Checkout que redirige al usuario a Stripe
+  /// para completar el pago. NO requiere "Raw Card Data APIs".
+  ///
+  /// Retorna la URL de Checkout a la que se debe redirigir al usuario.
+  static Future<CheckoutSessionResult?> createCheckoutSession({
+    required String rideId,
+    required double amount,
+    String currency = 'usd',
+    String? originAddress,
+    String? destinationAddress,
+    String? clientEmail,
+    String? clientName,
+    required String successUrl,
+    required String cancelUrl,
+  }) async {
+    try {
+      if (kDebugMode) {
+        debugPrint(
+          '[StripeService] 🛒 Creando Checkout Session para ride: $rideId, amount: $amount',
+        );
+      }
+
+      final supabaseService = SupabaseService();
+      final supabaseClient = supabaseService.client;
+
+      // Llamar a la Edge Function de Supabase
+      final response = await supabaseClient.functions.invoke(
+        'create-checkout-session',
+        body: {
+          'ride_id': rideId,
+          'amount': amount, // La Edge Function convierte a centavos
+          'currency': currency.toLowerCase(),
+          if (originAddress != null) 'origin_address': originAddress,
+          if (destinationAddress != null) 'destination_address': destinationAddress,
+          if (clientEmail != null) 'client_email': clientEmail,
+          if (clientName != null) 'client_name': clientName,
+          'success_url': successUrl,
+          'cancel_url': cancelUrl,
+        },
+      );
+
+      if (response.status == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        if (kDebugMode) {
+          debugPrint('[StripeService] ✅ Checkout Session creada: ${data['session_id']}');
+          debugPrint('[StripeService] 🔗 URL: ${data['checkout_url']}');
+        }
+        return CheckoutSessionResult.fromMap(data);
+      } else {
+        if (kDebugMode) {
+          debugPrint(
+            '[StripeService] ❌ Error creando Checkout Session: ${response.status} - ${response.data}',
+          );
+        }
+        return null;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[StripeService] ❌ Excepción creando Checkout Session: $e');
+      }
+      return null;
+    }
+  }
+
+  /// Verificar el estado de una Checkout Session
+  ///
+  /// Este método verifica si el pago fue exitoso después de que el usuario
+  /// regresa de Stripe Checkout.
+  ///
+  /// Retorna un Map con:
+  /// - 'success': bool - Si el pago fue exitoso
+  /// - 'payment_status': String - Estado del pago ('paid', 'unpaid', etc.)
+  /// - 'payment_intent_id': String? - ID del Payment Intent si fue exitoso
+  /// - 'ride_id': String? - ID del viaje
+  static Future<Map<String, dynamic>> verifyCheckoutSession({required String sessionId}) async {
+    try {
+      if (kDebugMode) {
+        debugPrint('[StripeService] 🔍 Verificando Checkout Session: $sessionId');
+      }
+
+      final supabaseService = SupabaseService();
+      final supabaseClient = supabaseService.client;
+
+      // Llamar a la Edge Function de Supabase
+      final response = await supabaseClient.functions.invoke(
+        'verify-checkout-session',
+        body: {'session_id': sessionId},
+      );
+
+      if (response.status == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        if (kDebugMode) {
+          debugPrint('[StripeService] ✅ Verificación completada');
+          debugPrint('[StripeService] Estado: ${data['payment_status']}');
+        }
+        return {
+          'success': data['success'] as bool? ?? false,
+          'payment_status': data['payment_status'] as String? ?? 'unknown',
+          'payment_intent_id': data['payment_intent_id'] as String?,
+          'ride_id': data['ride_id'] as String?,
+          'amount': data['amount'] as int?,
+          'currency': data['currency'] as String?,
+        };
+      } else {
+        if (kDebugMode) {
+          debugPrint(
+            '[StripeService] ❌ Error verificando Checkout Session: ${response.status} - ${response.data}',
+          );
+        }
+        return {
+          'success': false,
+          'payment_status': 'error',
+          'error': 'Error al verificar la sesión de pago',
+        };
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[StripeService] ❌ Excepción verificando Checkout Session: $e');
+      }
+      return {
+        'success': false,
+        'payment_status': 'error',
+        'error': 'Error al verificar la sesión de pago: ${e.toString()}',
+      };
+    }
   }
 }

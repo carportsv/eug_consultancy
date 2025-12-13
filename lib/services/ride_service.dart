@@ -58,17 +58,21 @@ class RideService {
   final SupabaseService _supabaseService = SupabaseService();
 
   /// Validar datos de tarjeta si el método de pago es tarjeta
+  /// NOTA: En web con Stripe Checkout, no se validan porque el usuario los ingresará en Stripe
   void _validateCardData(CreateRideData data) {
     if (data.paymentMethod == 'card') {
-      if (data.cardNumber == null || data.cardNumber!.isEmpty) {
-        throw Exception('Por favor ingrese el número de tarjeta');
+      // Solo validar si hay datos de tarjeta (móvil con Payment Sheet)
+      // En web con Stripe Checkout, cardNumber será vacío y está bien
+      if (data.cardNumber != null && data.cardNumber!.isNotEmpty) {
+        // Si hay datos de tarjeta, validarlos (móvil)
+        if (data.cardExpiry == null || data.cardExpiry!.isEmpty) {
+          throw Exception('Por favor ingrese la fecha de expiración');
+        }
+        if (data.cardName == null || data.cardName!.isEmpty) {
+          throw Exception('Por favor ingrese el nombre en la tarjeta');
+        }
       }
-      if (data.cardExpiry == null || data.cardExpiry!.isEmpty) {
-        throw Exception('Por favor ingrese la fecha de expiración');
-      }
-      if (data.cardName == null || data.cardName!.isEmpty) {
-        throw Exception('Por favor ingrese el nombre en la tarjeta');
-      }
+      // Si cardNumber está vacío, asumimos que es web con Stripe Checkout y no validamos
     }
   }
 
@@ -269,6 +273,39 @@ class RideService {
       }
       // No lanzar excepción - el pago ya fue confirmado, solo falló la actualización de BD
       // Esto no debería bloquear el flujo del usuario
+    }
+  }
+
+  /// Obtener un viaje por su ID
+  Future<Map<String, dynamic>?> getRideById(String rideId) async {
+    try {
+      if (kDebugMode) {
+        debugPrint('[RideService] 🔍 Obteniendo viaje con ID: $rideId');
+      }
+
+      final supabaseClient = _supabaseService.client;
+      final response = await supabaseClient
+          .from('ride_requests')
+          .select('*')
+          .eq('id', rideId)
+          .maybeSingle();
+
+      if (response != null) {
+        if (kDebugMode) {
+          debugPrint('[RideService] ✅ Viaje encontrado');
+        }
+        return Map<String, dynamic>.from(response);
+      } else {
+        if (kDebugMode) {
+          debugPrint('[RideService] ⚠️ Viaje no encontrado');
+        }
+        return null;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[RideService] ❌ Error obteniendo viaje: $e');
+      }
+      rethrow;
     }
   }
 }
