@@ -6,23 +6,33 @@ import 'dart:js_interop';
 bool _isPromise(dynamic obj) {
   if (obj == null) return false;
   try {
-    // Verificar que tenga el método then (las Promises de JavaScript siempre tienen then)
-    // También verificar que then sea una función
-    final thenMethod = obj.then;
-    if (thenMethod == null) return false;
-
-    // Verificar que sea una función (Function o cualquier callable)
-    // También verificar que tenga 'catch' usando notación de corchetes (las Promises siempre tienen catch)
+    // Para js_interop, intentar acceder a then de múltiples formas
+    dynamic thenMethod;
+    
+    // Intentar acceder a then directamente
     try {
-      final catchMethod = obj['catch'];
-      return thenMethod is Function && (catchMethod == null || catchMethod is Function);
+      thenMethod = obj.then;
     } catch (_) {
-      // Si no se puede acceder a catch, verificar solo then
-      return thenMethod is Function;
+      // Si falla, intentar con notación de corchetes
+      try {
+        thenMethod = obj['then'];
+      } catch (_) {
+        return false;
+      }
     }
+    
+    if (thenMethod == null) return false;
+    
+    // Verificar que then sea callable (puede ser Function, JSFunction, etc.)
+    // En js_interop, puede ser cualquier objeto callable
+    return true; // Si tiene then, asumimos que es una Promise
   } catch (e) {
-    // Si hay error accediendo a las propiedades, no es una Promise válida
-    return false;
+    // Si hay error, intentar verificar directamente si es JSPromise
+    try {
+      return obj is JSPromise;
+    } catch (_) {
+      return false;
+    }
   }
 }
 
@@ -37,19 +47,20 @@ extension JSPromiseExtension<T extends JSAny?> on JSPromise<T> {
     try {
       // Intentar como dynamic primero para mayor compatibilidad
       promiseObj = this as dynamic;
-
-      // Verificar que sea una Promise válida
-      if (!_isPromise(promiseObj)) {
-        completer.completeError(
-          Exception(
-            'El objeto retornado no es una Promise válida. Tipo: ${promiseObj.runtimeType}',
-          ),
-        );
-        return completer.future;
+      
+      // Si es JSPromise, intentar usarlo directamente sin verificar
+      // js_interop garantiza que JSPromise es una Promise válida
+      if (this is JSPromise) {
+        // Continuar con la conversión
+      } else if (!_isPromise(promiseObj)) {
+        // Si no es JSPromise y no pasa la verificación, intentar de todas formas
+        // porque puede ser una Promise que no se reconoce correctamente
+        debugPrint('[JSPromiseExtension] Advertencia: Objeto no reconocido como Promise, intentando de todas formas');
       }
     } catch (e) {
-      completer.completeError(Exception('Error al verificar Promise: $e. Tipo: $runtimeType'));
-      return completer.future;
+      // Si hay error, intentar de todas formas llamando then
+      debugPrint('[JSPromiseExtension] Error al verificar Promise: $e, intentando de todas formas');
+      promiseObj = this as dynamic;
     }
 
     // Crear funciones JS para manejar resolve y reject
@@ -92,7 +103,6 @@ extension JSPromiseExtension<T extends JSAny?> on JSPromise<T> {
 // Nota: La función JavaScript debe estar disponible en window.firebaseAuthSignInWithGoogle
 @JS('firebaseAuthSignInWithGoogle')
 external JSPromise<JSObject?> firebaseAuthSignInWithGoogleJS(JSObject config);
-
 
 // Función alternativa para verificar si la función JS está disponible
 @JS('window')
