@@ -1240,12 +1240,10 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
 
   Widget _buildCardForm() {
     // En web, mostrar solo botón de Stripe Checkout
-    // Usar verificación robusta de plataforma web
-    final isWeb = _isWebPlatform;
     if (kDebugMode) {
-      debugPrint('[PaymentConfirmationScreen] _buildCardForm - kIsWeb: $kIsWeb, _isWebPlatform: $isWeb');
+      debugPrint('[PaymentConfirmationScreen] _buildCardForm - kIsWeb: $kIsWeb');
     }
-    if (isWeb) {
+    if (kIsWeb) {
       return Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 500),
