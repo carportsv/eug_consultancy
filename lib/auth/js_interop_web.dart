@@ -10,9 +10,18 @@ bool _isPromise(dynamic obj) {
     // También verificar que then sea una función
     final thenMethod = obj.then;
     if (thenMethod == null) return false;
+    
     // Verificar que sea una función (Function o cualquier callable)
-    return thenMethod is Function;
+    // También verificar que tenga 'catch' usando notación de corchetes (las Promises siempre tienen catch)
+    try {
+      final catchMethod = obj['catch'];
+      return thenMethod is Function && (catchMethod == null || catchMethod is Function);
+    } catch (_) {
+      // Si no se puede acceder a catch, verificar solo then
+      return thenMethod is Function;
+    }
   } catch (e) {
+    // Si hay error accediendo a las propiedades, no es una Promise válida
     return false;
   }
 }
