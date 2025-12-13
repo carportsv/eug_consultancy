@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import './login_screen.dart';
 import './routing_screen.dart';
 import '../screens/welcome/welcome/welcome_screen.dart';
+// Importación condicional para leer hash en web
+import '../router/route_handler_stub.dart' if (dart.library.html) '../router/route_handler_web.dart';
 
 /// The definitive, stable AuthGate.
 /// It uses a [StreamBuilder] to listen to Firebase's auth state changes.
@@ -299,11 +301,73 @@ class _AuthGateContentState extends State<_AuthGateContent> {
           debugPrint('ℹ️ AuthGate: No user logged in');
         }
 
-        // En web, después de logout, siempre redirigir a WelcomeScreen
-        // Esto es especialmente importante en GitHub Pages donde el routing puede ser diferente
+        // En web, verificar la ruta actual para decidir qué mostrar
         if (kIsWeb) {
+          // Verificar si estamos en la ruta /admin
+          bool isAdminRoute = false;
+          try {
+            // Verificar el path y el fragment (hash) de la URL
+            String path = Uri.base.path;
+            String fragment = Uri.base.fragment;
+            final fullUri = Uri.base.toString();
+            
+            // Si el fragmento está vacío, intentar leerlo de window.location.hash
+            if (fragment.isEmpty && kIsWeb) {
+              try {
+                fragment = getHashFromWindow();
+                if (kDebugMode && fragment.isNotEmpty) {
+                  debugPrint('[AuthGate] Hash obtenido de window.location: $fragment');
+                }
+              } catch (e) {
+                if (kDebugMode) {
+                  debugPrint('[AuthGate] Error obteniendo hash: $e');
+                }
+              }
+            }
+            
+            // Normalizar el fragment
+            String normalizedFragment = fragment;
+            if (fragment.isNotEmpty) {
+              if (!fragment.startsWith('/')) {
+                normalizedFragment = '/$fragment';
+              }
+            }
+            
+            // Verificar si es ruta admin (path o hash)
+            isAdminRoute = path.contains('/admin') ||
+                path.endsWith('/admin') ||
+                path == '/admin' ||
+                fragment.contains('/admin') ||
+                fragment == 'admin' ||
+                fragment == '/admin' ||
+                normalizedFragment == '/admin' ||
+                normalizedFragment.contains('/admin') ||
+                fullUri.contains('/admin') ||
+                fullUri.contains('#/admin') ||
+                fullUri.contains('index.html#/admin');
+            
+            if (kDebugMode) {
+              debugPrint('[AuthGate] Web - Path: $path, Fragment: $fragment, Normalized: $normalizedFragment');
+              debugPrint('[AuthGate] Web - Full URI: $fullUri');
+              debugPrint('[AuthGate] Web - Is admin route: $isAdminRoute');
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              debugPrint('[AuthGate] Error verificando ruta: $e');
+            }
+          }
+          
+          // Si estamos en /admin, mostrar LoginScreen (requiere login)
+          if (isAdminRoute) {
+            if (kDebugMode) {
+              debugPrint('[AuthGate] Web - Ruta /admin detectada, mostrando LoginScreen');
+            }
+            return const LoginScreen();
+          }
+          
+          // Si no es /admin, redirigir a WelcomeScreen (público)
           if (kDebugMode) {
-            debugPrint('[AuthGate] Web - Redirigiendo a WelcomeScreen después de logout');
+            debugPrint('[AuthGate] Web - Redirigiendo a WelcomeScreen (ruta pública)');
           }
           return const WelcomeScreen();
         }

@@ -119,9 +119,17 @@
   </div>
   
   <script>
-    // Redirigir a /welcome si estamos en la raíz
+    // Redirigir a /welcome si estamos en la raíz (solo si NO hay hash)
     (function() {
       const currentPath = window.location.pathname;
+      const currentHash = window.location.hash;
+      
+      // Si hay hash (#/admin, #/welcome, etc.), NO redirigir - dejar que Flutter lo maneje
+      if (currentHash && currentHash.length > 0) {
+        return; // Hay hash, no redirigir
+      }
+      
+      // Solo redirigir si estamos en la raíz y NO hay hash
       if (currentPath === '/' || currentPath === '/index.html') {
         window.location.replace('/welcome');
         return;
@@ -305,6 +313,16 @@
       const flutterScripts = document.querySelectorAll('script[src*="flutter"], script[src*="main.dart"]');
       const ddcLoader = document.querySelector('script[src*="ddc_module_loader"]');
       
+      // Verificar si Flutter ya está renderizado (fallback si el evento no se dispara)
+      const canvas = document.querySelector('canvas');
+      if (canvas && canvas.width > 100 && canvas.height > 100 && !firstFrameReceived) {
+        console.log('🎬 Flutter canvas detectado (fallback), iniciando verificación...');
+        // Disparar manualmente el proceso de verificación
+        const event = new Event('flutter-first-frame');
+        window.dispatchEvent(event);
+        return;
+      }
+      
       // Si hay scripts de Flutter pero aún no hay primer frame, mantener splash visible
       if ((flutterScripts.length > 0 || ddcLoader) && !firstFrameReceived) {
         console.log('⏳ Flutter está cargando, manteniendo splash visible...');
@@ -312,8 +330,10 @@
       }
     }, 500); // Verificar cada 500ms
     
-    // Escuchar el primer frame de Flutter
-    window.addEventListener('flutter-first-frame', function() {
+    // Función para iniciar la verificación de Flutter (reutilizable)
+    function startFlutterVerification() {
+      if (firstFrameReceived) return; // Ya se inició
+      
       firstFrameReceived = true;
       readyChecks = 0; // Resetear contador
       firstReadyTime = 0;
@@ -324,7 +344,7 @@
         flutterLoadingCheck = null;
       }
       
-      console.log('🎬 Flutter first frame received, waiting for WelcomeScreen...');
+      console.log('🎬 Flutter first frame detected, waiting for WelcomeScreen...');
       
       // Esperar más tiempo antes de empezar a verificar (dar tiempo a que Firebase/Supabase y WelcomeScreen inicialicen)
       // Basado en los logs, Firebase y Supabase tardan ~1-2 segundos, luego WelcomeScreen se renderiza
@@ -332,7 +352,7 @@
         console.log('🔍 Starting to check if WelcomeScreen is ready...');
         // Iniciar polling para verificar cuando WelcomeScreen esté completamente listo
         let attempts = 0;
-        const maxAttempts = 50; // Máximo 20 segundos (200 * 100ms)
+        const maxAttempts = 500; // Máximo 5 segundos (500 * 10ms)
         
         checkInterval = setInterval(function() {
           attempts++;
@@ -379,9 +399,12 @@
             checkInterval = null;
             hideSplash();
           }
-        }, 10); // Verificar cada 100ms
-      }, 100); // Esperar 3 segundos después del primer frame (tiempo suficiente para que Firebase/Supabase/WelcomeScreen inicialicen completamente)
-    });
+        }, 10); // Verificar cada 10ms
+      }, 100); // Esperar 100ms después del primer frame (tiempo suficiente para que Firebase/Supabase/WelcomeScreen inicialicen completamente)
+    }
+    
+    // Escuchar el primer frame de Flutter (evento oficial)
+    window.addEventListener('flutter-first-frame', startFlutterVerification);
     
     // Fallback: ocultar después de máximo 30 segundos si nada funciona
     // (suficiente tiempo para que Flutter cargue completamente, incluso en conexiones lentas)
